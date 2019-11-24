@@ -138,4 +138,8 @@ public struct Pass: Codable {
     /// Information used for Value Added Service Protocol transactions.
     /// Available in iOS 9.0.
     public var nfc: PassNFC?
+    
+    /// The user-visible information on Wallet passes can be augmented with machine-readable metadata known as semantic tags. The metadata in semantic tags helps the operating system better understand Wallet passes and offer relevant installed passes to the user.
+    /// Semantic tags can be added to all types of Wallet passes, but some tags are only applicable to specific types such as event tickets, boarding passes, and store cards. For a full list of all tags and their associated pass types.
+    public var semantics: PassSemantics?
 }

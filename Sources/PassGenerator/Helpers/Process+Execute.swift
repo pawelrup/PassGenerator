@@ -116,20 +116,20 @@ extension Process {
                 }
             }
 
-            // stdout.fileHandleForReading.readabilityHandler = { handle in
-            //     let data = handle.availableData
-            //     guard !data.isEmpty else {
-            //         return
-            //     }
-            //     output(.stdout(data))
-            // }
-            // stderr.fileHandleForReading.readabilityHandler = { handle in
-            //     let data = handle.availableData
-            //     guard !data.isEmpty else {
-            //         return
-            //     }
-            //     output(.stderr(data))
-            // }
+             stdout.fileHandleForReading.readabilityHandler = { handle in
+                 let data = handle.availableData
+                 guard !data.isEmpty else {
+                     return
+                 }
+                 output(.stdout(data))
+             }
+             stderr.fileHandleForReading.readabilityHandler = { handle in
+                 let data = handle.availableData
+                 guard !data.isEmpty else {
+                     return
+                 }
+                 output(.stderr(data))
+             }
             let promise = eventLoop.makePromise(of: Int32.self)
             DispatchQueue.global().async {
                 let process = launchProcess(path: program, arguments, stdout: stdout, stderr: stderr)
