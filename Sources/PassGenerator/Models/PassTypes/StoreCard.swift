@@ -7,7 +7,7 @@
 
 import Foundation
 
-protocol StoreCard {
+public protocol StoreCard {
     var description: String { get }
     var organizationName: String { get }
     var passTypeIdentifier: String { get }
@@ -36,7 +36,7 @@ extension StoreCard {
         PassStructure(auxiliaryFields: auxiliaryFields, backFields: backFields, headerFields: headerFields, primaryFields: primaryFields, secondaryFields: secondaryFields, transitType: nil)
     }
     
-    var pass: Pass {
+    public var pass: Pass {
         Pass(
             description: description,
             formatVersion: 1,

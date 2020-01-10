@@ -7,7 +7,7 @@
 
 import Foundation
 
-protocol BoardingPass {
+public protocol BoardingPass {
     var description: String { get }
     var organizationName: String { get }
     var passTypeIdentifier: String { get }
@@ -38,7 +38,7 @@ extension BoardingPass {
         PassStructure(auxiliaryFields: auxiliaryFields, backFields: backFields, headerFields: headerFields, primaryFields: primaryFields, secondaryFields: secondaryFields, transitType: transitType)
     }
     
-    var pass: Pass {
+    public var pass: Pass {
         Pass(
             description: description,
             formatVersion: 1,
