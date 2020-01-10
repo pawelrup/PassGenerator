@@ -40,6 +40,16 @@ public struct PassPersonNameComponents: Codable {
         phoneticRepresentation = try values.decodeIfPresent(PassPersonNameComponents.self, forKey: .phoneticRepresentation)
     }
     
+    public init(givenName: String? = nil, middleName: String? = nil, familyName: String? = nil, namePrefix: String? = nil, nameSuffix: String? = nil, nickname: String? = nil, phoneticRepresentation: PassPersonNameComponents? = nil) {
+        self.givenName = givenName
+        self.middleName = middleName
+        self.familyName = familyName
+        self.namePrefix = namePrefix
+        self.nameSuffix = nameSuffix
+        self.nickname = nickname
+        self.phoneticRepresentation = phoneticRepresentation
+    }
+    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(givenName, forKey: .givenName)

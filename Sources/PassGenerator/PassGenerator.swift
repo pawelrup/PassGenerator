@@ -1,5 +1,6 @@
 import Foundation
 import NIO
+import Core
 import CryptoSwift
 import ZIPFoundation
 
@@ -20,10 +21,10 @@ public struct PassGenerator {
     
     /// Creates a new `WalletKit`.
     /// - parameters:
-    ///     - certificateURL: Path to the pass certificate.
+    ///     - certificateURL: URL to the pass certificate.
     ///     - certificatePassword: Password of the pass certificate.
-    ///     - wwdrURL: Path to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
-    ///     - templateDirectoryURL: Path of the template to be used for the pass, containing the images etc.
+    ///     - wwdrURL: URL to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
+    ///     - templateDirectoryURL: URL of the template to be used for the pass, containing the images etc.
     public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateDirectoryURL: URL) {
         self.certificateURL = certificateURL
         self.certificatePassword = certificatePassword
@@ -39,34 +40,46 @@ public struct PassGenerator {
     ///     - worker: Worker to perform async task on.
     /// - returns: A future containing the data of the generated pass.
     public func generatePass(pass: Pass, destination: URL? = nil, on eventLoop: EventLoop) throws -> EventLoopFuture<Data> {
-        let currentDirectoryURL = URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true)
-        let temporaryDirectoryURL = currentDirectoryURL.appendingPathComponent(UUID().uuidString)
-        let passDirectoryURL = temporaryDirectoryURL.appendingPathComponent("pass")
-        let destinationURL = (destination ?? temporaryDirectoryURL).appendingPathComponent("pass.pkpass")
+        let directory = URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true)
+        let temporaryDirectory = directory.appendingPathComponent(UUID().uuidString)
+        let passDirectory = temporaryDirectory.appendingPathComponent("pass")
+        let destinationURL = (destination ?? temporaryDirectory).appendingPathComponent("pass.pkpass")
         
-        let prepare = preparePass(pass: pass, temporaryDirectory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop)
+        let prepare = preparePass(pass: pass, temporaryDirectory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop)
         return prepare
-            .flatMap { _ in self.generateManifest(directory: passDirectoryURL, on: eventLoop) }
-            .flatMap { _ in self.generateKey(directory: temporaryDirectoryURL, on: eventLoop) }
-            .flatMap { _ in self.generateCertificate(directory: temporaryDirectoryURL, on: eventLoop) }
-            .flatMap { _ in self.generateSignature(directory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop) }
-            .flatMap { _ in self.zipPass(passURL: passDirectoryURL, zipURL: destinationURL, on: eventLoop) }
-            .flatMapThrowing { _ in try Data(contentsOf: destinationURL) }
-            .always { _ in try? self.fileManager.removeItem(at: temporaryDirectoryURL) }
+            .flatMap { (_) -> EventLoopFuture<Void> in
+                self.generateManifest(directory: passDirectory, on: eventLoop)
+            }
+            .flatMap { (_) -> EventLoopFuture<Void> in
+                self.generateKey(directory: temporaryDirectory, on: eventLoop)
+            }
+            .flatMap { (_) -> EventLoopFuture<Void> in
+                self.generateCertificate(directory: temporaryDirectory, on: eventLoop)
+            }
+            .flatMap { (_) -> EventLoopFuture<Void> in
+                self.generateSignature(directory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop)
+            }
+            .flatMap { (_) -> EventLoopFuture<Void> in
+                self.zipPass(passURL: passDirectory, zipURL: destinationURL, on: eventLoop)
+            }
+            .thenThrowing { try Data(contentsOf: destinationURL) }
+            .always { try? self.fileManager.removeItem(at: temporaryDirectory) }
     }
 }
 
 private extension PassGenerator {
     
     func preparePass(pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
+        let promise = eventLoop.newPromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 try self.fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
                 try self.fileManager.copyItem(at: self.templateDirectoryURL, to: passDirectory)
                 
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd'T'HH:mmZZZZZ"
                 let jsonEncoder = JSONEncoder()
-                jsonEncoder.dateEncodingStrategy = .iso8601
+                jsonEncoder.dateEncodingStrategy = .formatted(formatter)
                 let passData: Data
                 do {
                     passData = try jsonEncoder.encode(pass)
@@ -75,16 +88,16 @@ private extension PassGenerator {
                 }
                 let passURL = passDirectory.appendingPathComponent("pass.json")
                 self.fileManager.createFile(atPath: passURL.path, contents: passData, attributes: nil)
-                promise.succeed(())
+                promise.succeed(result: ())
             } catch {
-                promise.fail(error)
+                promise.fail(error: error)
             }
         }
         return promise.futureResult
     }
     
     func generateManifest(directory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
+        let promise = eventLoop.newPromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 let contents = try self.fileManager.contentsOfDirectory(atPath: directory.path)
@@ -97,9 +110,9 @@ private extension PassGenerator {
                 let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
                 let manifestPath = directory.appendingPathComponent("manifest.json").path
                 self.fileManager.createFile(atPath: manifestPath, contents: manifestData, attributes: nil)
-                promise.succeed(())
+                promise.succeed(result: ())
             } catch {
-                promise.fail(error)
+                promise.fail(error: error)
             }
         }
         return promise.futureResult
@@ -118,11 +131,11 @@ private extension PassGenerator {
             "-passin",
             "pass:" + certificatePassword,
             "-passout",
-            "pass:" + certificatePassword, on: eventLoop) { _ in }.flatMapThrowing { result in
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing({ result in
                 guard result == 0 else {
                     throw PassGeneratorError.cannotGenerateKey
                 }
-        }
+            })
     }
     
     func generateCertificate(directory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
@@ -137,7 +150,7 @@ private extension PassGenerator {
             "-out",
             certURL.path,
             "-passin",
-            "pass:" + certificatePassword, on: eventLoop) { _ in }.flatMapThrowing { result in
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing { result in
                 guard result == 0 else {
                     throw PassGeneratorError.cannotGenerateCertificate
                 }
@@ -163,7 +176,7 @@ private extension PassGenerator {
             "der",
             "-binary",
             "-passin",
-            "pass:" + certificatePassword, on: eventLoop) { _ in }.flatMapThrowing { result in
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing { result in
                 guard result == 0 else {
                     throw PassGeneratorError.cannotGenerateCertificate
                 }
@@ -171,13 +184,13 @@ private extension PassGenerator {
     }
     
     func zipPass(passURL: URL, zipURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
+        let promise = eventLoop.newPromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 try self.fileManager.zipItem(at: passURL, to: zipURL, shouldKeepParent: false)
-                promise.succeed(())
+                promise.succeed(result: ())
             } catch {
-                promise.fail(error)
+                promise.fail(error: error)
             }
         }
         return promise.futureResult

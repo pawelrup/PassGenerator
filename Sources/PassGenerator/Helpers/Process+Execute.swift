@@ -1,5 +1,6 @@
 import Foundation
 import NIO
+import Core
 
 /// Different types of process output.
 public enum ProcessOutput {
@@ -42,7 +43,7 @@ extension Process {
     public static func execute(_ program: String, _ arguments: [String]) throws -> String {
         var stderr: String = ""
         var stdout: String = ""
-        let status = try asyncExecute(program, arguments, on: EmbeddedEventLoop()) { output in
+        let status = try asyncExecute(program, arguments, on: EmbeddedEventLoop()) { (output: ProcessOutput) in
             switch output {
             case .stderr(let data):
                 stderr += String(data: data, encoding: .utf8) ?? ""
@@ -130,25 +131,25 @@ extension Process {
                  }
                  output(.stderr(data))
              }
-            let promise = eventLoop.makePromise(of: Int32.self)
+            let promise = eventLoop.newPromise(of: Int32.self)
             DispatchQueue.global().async {
                 let process = launchProcess(path: program, arguments, stdout: stdout, stderr: stderr)
                 process.waitUntilExit()
                 running = false
-                promise.completeWith(.success(process.terminationStatus))
+                promise.succeed(result: process.terminationStatus)
             }
             return promise.futureResult
         } else {
             var resolvedPath: String?
-            return asyncExecute("/bin/sh", ["-c", "which \(program)"], on: eventLoop) { o in
+            return asyncExecute("/bin/sh", ["-c", "which \(program)"], on: eventLoop, { (o: ProcessOutput) in
                 switch o {
                 case .stdout(let data): resolvedPath = String(data: data, encoding: .utf8)?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 default: break
                 }
-            }.flatMap { status in
+            }).flatMap { status in
                 guard let path = resolvedPath, path.hasPrefix("/") else {
-                    return eventLoop.makeFailedFuture(ProcessError.executablePathNotFound)
+                    return eventLoop.newFailedFuture(error: ProcessError.executablePathNotFound)
                 }
                 return asyncExecute(path, arguments, on: eventLoop, output)
             }

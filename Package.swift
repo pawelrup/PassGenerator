@@ -16,7 +16,8 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.10.0")),
+        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "1.14.1")),
+        .package(url: "https://github.com/vapor/core.git", .upToNextMajor(from: "3.9.0")),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", .upToNextMajor(from: "0.9.9")),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMajor(from: "1.2.0"))
     ],
@@ -25,7 +26,7 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
             name: "PassGenerator",
-            dependencies: ["NIO", "ZIPFoundation", "CryptoSwift"]),
+            dependencies: ["NIO", "Core", "ZIPFoundation", "CryptoSwift"]),
         .testTarget(
             name: "PassGeneratorTests",
             dependencies: ["PassGenerator"]),

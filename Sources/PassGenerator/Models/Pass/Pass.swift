@@ -54,7 +54,7 @@ public struct Pass: Codable {
     /// Date and time when the pass expires.
     /// The value must be a complete date with hours and minutes, and may optionally include seconds.
     /// Available in iOS 7.0.
-    public var expirationDate: String?
+    public var expirationDate: Date?
     /// Indicates that the pass is void—for example, a one time use coupon that has been redeemed. The default value is false.
     /// Available in iOS 7.0.
     public var voided: Bool?
@@ -71,7 +71,7 @@ public struct Pass: Codable {
     /// Recommended for event tickets and boarding passes; otherwise optional.
     /// Date and time when the pass becomes relevant. For example, the start time of a movie.
     /// The value must be a complete date with hours and minutes, and may optionally include seconds.
-    public var relevantDate: String?
+    public var relevantDate: Date?
     
     /// - Style Keys
     /// Keys that specify the pass style

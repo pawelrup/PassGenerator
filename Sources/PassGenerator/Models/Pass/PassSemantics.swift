@@ -44,17 +44,17 @@ public struct PassSemantics: Codable {
     /// A brief description of the type of vehicle being boarded, such as the model and manufacturer of a plane or the class of a boat.
     public var vehicleType: String?
     /// The updated date and time of departure, if different than the original scheduled date.
-    public var originalDepartureDate: String?
+    public var originalDepartureDate: Date?
     /// The updated date and time of departure, if different than the original scheduled date.
-    public var currentDepartureDate: String?
+    public var currentDepartureDate: Date?
     /// The original scheduled date and time of arrival.
-    public var originalArrivalDate: String?
+    public var originalArrivalDate: Date?
     /// The updated date and time of arrival, if different than the original scheduled date.
-    public var currentArrivalDate: String?
+    public var currentArrivalDate: Date?
     /// The original scheduled date and time of boarding.
-    public var originalBoardingDate: String?
+    public var originalBoardingDate: Date?
     /// The updated date and time of boarding, if different than the original scheduled date.
-    public var currentBoardingDate: String?
+    public var currentBoardingDate: Date?
     /// A group number for boarding.
     public var boardingGroup: String?
     /// A sequence number for boarding.
@@ -131,9 +131,9 @@ public struct PassSemantics: Codable {
     /// The event type.
     public var eventType: PassEventType?
     /// The date and time the event starts.
-    public var eventStartDate: String?
+    public var eventStartDate: Date?
     /// The date and time the event ends.
-    public var eventEndDate: String?
+    public var eventEndDate: Date?
     /// The Adam IDs for the artists performing, in decreasing order of significance.
     public var artistIDs: [String]?
     /// The full names of the performers and opening acts, in decreasing order of significance.
