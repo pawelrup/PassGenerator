@@ -12,4 +12,9 @@ public struct PassNFC: Codable {
     public var message: String
     /// The public encryption key used by the Value Added Services protocol. Use a Base64 encoded X.509 SubjectPublicKeyInfo structure containing a ECDH public key for group P256.
     public var encryptionPublicKey: String?
+    
+    public init(message: String, encryptionPublicKey: String? = nil) {
+        self.message = message
+        self.encryptionPublicKey = encryptionPublicKey
+    }
 }

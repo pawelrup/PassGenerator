@@ -16,4 +16,11 @@ public struct PassBarcode: Codable {
     public var message: String
     /// Text encoding that is used to convert the message from the string representation to a data representation to render the barcode. The value is typically iso-8859-1, but you may use another encoding that is supported by your barcode scanning infrastructure.
     public var messageEncoding: PassCharacterEncoding?
+    
+    public init(altText: String? = nil, format: PassBarcodeFormat, message: String, messageEncoding: PassCharacterEncoding? = nil) {
+        self.altText = altText
+        self.format = format
+        self.message = message
+        self.messageEncoding = messageEncoding
+    }
 }

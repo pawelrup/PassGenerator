@@ -19,4 +19,13 @@ public struct PassSeat: Codable {
     public let seatIdentifier: String?
     public let seatType: String?
     public let seatDescription: String?
+    
+    public init(seatSection: String? = nil, seatRow: String? = nil, seatNumber: String? = nil, seatIdentifier: String? = nil, seatType: String? = nil, seatDescription: String? = nil) {
+        self.seatSection = seatSection
+        self.seatRow = seatRow
+        self.seatNumber = seatNumber
+        self.seatIdentifier = seatIdentifier
+        self.seatType = seatType
+        self.seatDescription = seatDescription
+    }
 }

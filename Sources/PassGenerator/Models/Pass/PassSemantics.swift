@@ -166,4 +166,73 @@ public struct PassSemantics: Codable {
     
     /// The balance redeemable with the pass.
     public var balance: PassCurrencyAmount?
+    
+    public init(totalPrice: PassCurrencyAmount? = nil, duration: PassValue? = nil, seats: [PassSeat]? = nil, silenceRequested: Bool? = nil, departureLocation: PassLocation? = nil, departureLocationDescription: String? = nil, destinationLocation: PassLocation? = nil, destinationLocationDescription: String? = nil, transitProvider: String? = nil, vehicleName: String? = nil, vehicleNumber: String? = nil, vehicleType: String? = nil, originalDepartureDate: Date? = nil, currentDepartureDate: Date? = nil, originalArrivalDate: Date? = nil, currentArrivalDate: Date? = nil, originalBoardingDate: Date? = nil, currentBoardingDate: Date? = nil, boardingGroup: String? = nil, boardingSequenceNumber: String? = nil, confirmationNumber: String? = nil, transitStatus: String? = nil, transitStatusReason: String? = nil, passengerName: PassPersonNameComponents? = nil, membershipProgramName: String? = nil, membershipProgramNumber: String? = nil, priorityStatus: String? = nil, securityScreening: String? = nil, flightCode: String? = nil, airlineCode: String? = nil, flightNumber: String? = nil, departureAirportCode: String? = nil, departureAirportName: String? = nil, departureTerminal: String? = nil, departureGate: String? = nil, destinationAirportCode: String? = nil, destinationAirportName: String? = nil, destinationTerminal: String? = nil, destinationGate: String? = nil, departurePlatform: String? = nil, departureStationName: String? = nil, destinationPlatform: String? = nil, destinationStationName: String? = nil, carNumber: String? = nil, eventName: String? = nil, venueName: String? = nil, venueLocation: PassLocation? = nil, venueEntrance: String? = nil, venuePhoneNumber: String? = nil, venueRoom: String? = nil, eventType: PassEventType? = nil, eventStartDate: Date? = nil, eventEndDate: Date? = nil, artistIDs: [String]? = nil, performerNames: [String]? = nil, genre: String? = nil, leagueName: String? = nil, leagueAbbreviation: String? = nil, homeTeamLocation: String? = nil, homeTeamName: String? = nil, homeTeamAbbreviation: String? = nil, awayTeamLocation: String? = nil, awayTeamName: String? = nil, awayTeamAbbreviation: String? = nil, sportName: String? = nil, balance: PassCurrencyAmount? = nil) {
+        self.totalPrice = totalPrice
+        self.duration = duration
+        self.seats = seats
+        self.silenceRequested = silenceRequested
+        self.departureLocation = departureLocation
+        self.departureLocationDescription = departureLocationDescription
+        self.destinationLocation = destinationLocation
+        self.destinationLocationDescription = destinationLocationDescription
+        self.transitProvider = transitProvider
+        self.vehicleName = vehicleName
+        self.vehicleNumber = vehicleNumber
+        self.vehicleType = vehicleType
+        self.originalDepartureDate = originalDepartureDate
+        self.currentDepartureDate = currentDepartureDate
+        self.originalArrivalDate = originalArrivalDate
+        self.currentArrivalDate = currentArrivalDate
+        self.originalBoardingDate = originalBoardingDate
+        self.currentBoardingDate = currentBoardingDate
+        self.boardingGroup = boardingGroup
+        self.boardingSequenceNumber = boardingSequenceNumber
+        self.confirmationNumber = confirmationNumber
+        self.transitStatus = transitStatus
+        self.transitStatusReason = transitStatusReason
+        self.passengerName = passengerName
+        self.membershipProgramName = membershipProgramName
+        self.membershipProgramNumber = membershipProgramNumber
+        self.priorityStatus = priorityStatus
+        self.securityScreening = securityScreening
+        self.flightCode = flightCode
+        self.airlineCode = airlineCode
+        self.flightNumber = flightNumber
+        self.departureAirportCode = departureAirportCode
+        self.departureAirportName = departureAirportName
+        self.departureTerminal = departureTerminal
+        self.departureGate = departureGate
+        self.destinationAirportCode = destinationAirportCode
+        self.destinationAirportName = destinationAirportName
+        self.destinationTerminal = destinationTerminal
+        self.destinationGate = destinationGate
+        self.departurePlatform = departurePlatform
+        self.departureStationName = departureStationName
+        self.destinationPlatform = destinationPlatform
+        self.destinationStationName = destinationStationName
+        self.carNumber = carNumber
+        self.eventName = eventName
+        self.venueName = venueName
+        self.venueLocation = venueLocation
+        self.venueEntrance = venueEntrance
+        self.venuePhoneNumber = venuePhoneNumber
+        self.venueRoom = venueRoom
+        self.eventType = eventType
+        self.eventStartDate = eventStartDate
+        self.eventEndDate = eventEndDate
+        self.artistIDs = artistIDs
+        self.performerNames = performerNames
+        self.genre = genre
+        self.leagueName = leagueName
+        self.leagueAbbreviation = leagueAbbreviation
+        self.homeTeamLocation = homeTeamLocation
+        self.homeTeamName = homeTeamName
+        self.homeTeamAbbreviation = homeTeamAbbreviation
+        self.awayTeamLocation = awayTeamLocation
+        self.awayTeamName = awayTeamName
+        self.awayTeamAbbreviation = awayTeamAbbreviation
+        self.sportName = sportName
+        self.balance = balance
+    }
 }

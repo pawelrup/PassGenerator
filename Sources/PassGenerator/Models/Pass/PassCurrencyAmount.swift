@@ -15,4 +15,9 @@ import Foundation
 public struct PassCurrencyAmount: Codable {
     public let currencyCode: String
     public let amount: String
+    
+    public init(currencyCode: String, amount: String) {
+        self.currencyCode = currencyCode
+        self.amount = amount
+    }
 }

@@ -142,4 +142,38 @@ public struct Pass: Codable {
     /// The user-visible information on Wallet passes can be augmented with machine-readable metadata known as semantic tags. The metadata in semantic tags helps the operating system better understand Wallet passes and offer relevant installed passes to the user.
     /// Semantic tags can be added to all types of Wallet passes, but some tags are only applicable to specific types such as event tickets, boarding passes, and store cards. For a full list of all tags and their associated pass types.
     public var semantics: PassSemantics?
+    
+    public init(description: String, formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, logoText: String? = nil, suppressStripShine: Bool? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
+        self.description = description
+        self.formatVersion = formatVersion
+        self.organizationName = organizationName
+        self.passTypeIdentifier = passTypeIdentifier
+        self.serialNumber = serialNumber
+        self.teamIdentifier = teamIdentifier
+        self.appLaunchURL = appLaunchURL
+        self.associatedStoreIdentifiers = associatedStoreIdentifiers
+        self.userInfo = userInfo
+        self.expirationDate = expirationDate
+        self.voided = voided
+        self.beacons = beacons
+        self.locations = locations
+        self.maxDistance = maxDistance
+        self.relevantDate = relevantDate
+        self.boardingPass = boardingPass
+        self.coupon = coupon
+        self.eventTicket = eventTicket
+        self.generic = generic
+        self.storeCard = storeCard
+        self.barcodes = barcodes
+        self.backgroundColor = backgroundColor
+        self.foregroundColor = foregroundColor
+        self.groupingIdentifier = groupingIdentifier
+        self.labelColor = labelColor
+        self.logoText = logoText
+        self.suppressStripShine = suppressStripShine
+        self.authenticationToken = authenticationToken
+        self.webServiceURL = webServiceURL
+        self.nfc = nfc
+        self.semantics = semantics
+    }
 }
