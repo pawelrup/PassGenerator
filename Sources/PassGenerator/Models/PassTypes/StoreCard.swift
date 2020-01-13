@@ -16,6 +16,7 @@ public protocol StoreCard {
     var backgroundColor: String { get }
     var foregroundColor: String { get }
     var labelColor: String { get }
+    var stripColor: String? { get }
     var passBarcodeFormat: PassBarcodeFormat { get }
     var locations: [PassLocation] { get }
     var auxiliaryFields: [PassField]? { get }
@@ -50,6 +51,7 @@ extension StoreCard {
             backgroundColor: backgroundColor,
             foregroundColor: foregroundColor,
             labelColor: labelColor,
+            stripColor: stripColor,
             semantics: semantics)
     }
 }
