@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol BoardingPass {
+public protocol BoardingPass: PassConvertible {
     var description: String { get }
     var organizationName: String { get }
     var passTypeIdentifier: String { get }
@@ -32,14 +32,24 @@ public protocol BoardingPass {
 
 extension BoardingPass {
     private var passBarcode: PassBarcode {
-        .init(altText: passBarcodeAltText, format: passBarcodeFormat, message: passBarcodeMessage, messageEncoding: .iso88591)
+        .init(
+            altText: passBarcodeAltText,
+            format: passBarcodeFormat,
+            message: passBarcodeMessage,
+            messageEncoding: .iso88591)
     }
     private var passStructure: PassStructure {
-        PassStructure(auxiliaryFields: auxiliaryFields, backFields: backFields, headerFields: headerFields, primaryFields: primaryFields, secondaryFields: secondaryFields, transitType: transitType)
+        .init(
+            auxiliaryFields: auxiliaryFields,
+            backFields: backFields,
+            headerFields: headerFields,
+            primaryFields: primaryFields,
+            secondaryFields: secondaryFields,
+            transitType: transitType)
     }
     
     public var pass: Pass {
-        Pass(
+        .init(
             description: description,
             formatVersion: 1,
             organizationName: organizationName,

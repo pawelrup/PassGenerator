@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol StoreCard {
+public protocol StoreCard: PassConvertible {
     var description: String { get }
     var organizationName: String { get }
     var passTypeIdentifier: String { get }
