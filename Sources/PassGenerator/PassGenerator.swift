@@ -1,6 +1,5 @@
 import Foundation
 import NIO
-import Core
 import CryptoSwift
 import ZIPFoundation
 
@@ -62,15 +61,15 @@ public struct PassGenerator {
             .flatMap { (_) -> EventLoopFuture<Void> in
                 self.zipPass(passURL: passDirectory, zipURL: destinationURL, on: eventLoop)
             }
-            .thenThrowing { try Data(contentsOf: destinationURL) }
-            .always { try? self.fileManager.removeItem(at: temporaryDirectory) }
+            .flatMapThrowing { try Data(contentsOf: destinationURL) }
+            .always { _ in try? self.fileManager.removeItem(at: temporaryDirectory) }
     }
 }
 
 private extension PassGenerator {
     
     func preparePass(pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
+        let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 try self.fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
@@ -88,16 +87,16 @@ private extension PassGenerator {
                 }
                 let passURL = passDirectory.appendingPathComponent("pass.json")
                 self.fileManager.createFile(atPath: passURL.path, contents: passData, attributes: nil)
-                promise.succeed(result: ())
+                promise.succeed(())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult
     }
     
     func generateManifest(directory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
+        let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 let contents = try self.fileManager.contentsOfDirectory(atPath: directory.path)
@@ -110,9 +109,9 @@ private extension PassGenerator {
                 let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
                 let manifestPath = directory.appendingPathComponent("manifest.json").path
                 self.fileManager.createFile(atPath: manifestPath, contents: manifestData, attributes: nil)
-                promise.succeed(result: ())
+                promise.succeed(())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult
@@ -131,7 +130,8 @@ private extension PassGenerator {
             "-passin",
             "pass:" + certificatePassword,
             "-passout",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing({ result in
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing({ result in
                 guard result == 0 else {
                     throw PassGeneratorError.cannotGenerateKey
                 }
@@ -150,7 +150,8 @@ private extension PassGenerator {
             "-out",
             certURL.path,
             "-passin",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing { result in
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing { result in
                 guard result == 0 else {
                     throw PassGeneratorError.cannotGenerateCertificate
                 }
@@ -176,7 +177,8 @@ private extension PassGenerator {
             "der",
             "-binary",
             "-passin",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing { result in
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing { result in
                 guard result == 0 else {
                     throw PassGeneratorError.cannotGenerateCertificate
                 }
@@ -184,13 +186,13 @@ private extension PassGenerator {
     }
     
     func zipPass(passURL: URL, zipURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
+        let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 try self.fileManager.zipItem(at: passURL, to: zipURL, shouldKeepParent: false)
-                promise.succeed(result: ())
+                promise.succeed(())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult

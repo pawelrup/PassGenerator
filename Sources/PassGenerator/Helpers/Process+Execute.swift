@@ -1,6 +1,5 @@
 import Foundation
 import NIO
-import Core
 
 /// Different types of process output.
 public enum ProcessOutput {
@@ -131,12 +130,12 @@ extension Process {
                  }
                  output(.stderr(data))
              }
-            let promise = eventLoop.newPromise(of: Int32.self)
+            let promise = eventLoop.makePromise(of: Int32.self)
             DispatchQueue.global().async {
                 let process = launchProcess(path: program, arguments, stdout: stdout, stderr: stderr)
                 process.waitUntilExit()
                 running = false
-                promise.succeed(result: process.terminationStatus)
+                promise.completeWith(.success(process.terminationStatus))
             }
             return promise.futureResult
         } else {
@@ -149,7 +148,7 @@ extension Process {
                 }
             }).flatMap { status in
                 guard let path = resolvedPath, path.hasPrefix("/") else {
-                    return eventLoop.newFailedFuture(error: ProcessError.executablePathNotFound)
+                    return eventLoop.makeFailedFuture(ProcessError.executablePathNotFound)
                 }
                 return asyncExecute(path, arguments, on: eventLoop, output)
             }
