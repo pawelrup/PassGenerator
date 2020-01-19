@@ -38,7 +38,7 @@ public struct PassGenerator {
     ///     - arguments: An array of arguments to pass to the program.
     ///     - worker: Worker to perform async task on.
     /// - returns: A future containing the data of the generated pass.
-    public func generatePass(pass: Pass, destination: URL? = nil, on eventLoop: EventLoop) throws -> EventLoopFuture<Data> {
+    public func generatePass(pass: Pass, destination: URL? = nil, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
         let directory = URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true)
         let temporaryDirectory = directory.appendingPathComponent(UUID().uuidString)
         let passDirectory = temporaryDirectory.appendingPathComponent("pass")
@@ -46,21 +46,11 @@ public struct PassGenerator {
         
         let prepare = preparePass(pass: pass, temporaryDirectory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop)
         return prepare
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateManifest(directory: passDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateKey(directory: temporaryDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateCertificate(directory: temporaryDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateSignature(directory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.zipPass(passURL: passDirectory, zipURL: destinationURL, on: eventLoop)
-            }
+            .flatMap { self.generateManifest(directory: passDirectory, on: eventLoop) }
+            .flatMap { self.generateKey(directory: temporaryDirectory, on: eventLoop) }
+            .flatMap { self.generateCertificate(directory: temporaryDirectory, on: eventLoop) }
+            .flatMap { self.generateSignature(directory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop) }
+            .flatMap { self.zipPass(passURL: passDirectory, zipURL: destinationURL, on: eventLoop) }
             .flatMapThrowing { try Data(contentsOf: destinationURL) }
             .always { _ in try? self.fileManager.removeItem(at: temporaryDirectory) }
     }
