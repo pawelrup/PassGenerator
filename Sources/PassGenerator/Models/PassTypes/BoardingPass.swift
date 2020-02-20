@@ -27,6 +27,8 @@ public protocol BoardingPass: PassConvertible {
     var transitType: PassTransitType { get }
     var passBarcodeAltText: String { get }
     var passBarcodeMessage: String { get }
+    var authenticationToken: String? { get }
+    var webServiceURL: String? { get }
     var semantics: PassSemantics { get }
 }
 
@@ -63,6 +65,8 @@ extension BoardingPass {
             backgroundColor: backgroundColor,
             foregroundColor: foregroundColor,
             labelColor: labelColor,
+            authenticationToken: authenticationToken,
+            webServiceURL: webServiceURL,
             semantics: semantics)
     }
 }
