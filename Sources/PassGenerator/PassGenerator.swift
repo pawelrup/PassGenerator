@@ -15,7 +15,7 @@ public struct PassGenerator {
     private let certificateURL: URL
     private let certificatePassword: String
     private let wwdrURL: URL
-    private let templateDirectoryURL: URL
+    private let templateURL: URL
     private let fileManager = FileManager.default
     
     /// Creates a new `WalletKit`.
@@ -23,12 +23,12 @@ public struct PassGenerator {
     ///     - certificateURL: URL to the pass certificate.
     ///     - certificatePassword: Password of the pass certificate.
     ///     - wwdrURL: URL to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
-    ///     - templateDirectoryURL: URL of the template to be used for the pass, containing the images etc.
-    public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateDirectoryURL: URL) {
+    ///     - templateURL: URL of the template to be used for the pass, containing the images etc.
+    public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateURL: URL) {
         self.certificateURL = certificateURL
         self.certificatePassword = certificatePassword
         self.wwdrURL = wwdrURL
-        self.templateDirectoryURL = templateDirectoryURL
+        self.templateURL = templateURL
     }
     
     /// Generate a signed .pkpass file
@@ -63,7 +63,7 @@ private extension PassGenerator {
         DispatchQueue.global().async {
             do {
                 try self.fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
-                try self.fileManager.copyItem(at: self.templateDirectoryURL, to: passDirectory)
+                try self.fileManager.copyItem(at: self.templateURL, to: passDirectory)
                 
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy-MM-dd'T'HH:mmZZZZZ"
