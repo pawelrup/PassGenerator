@@ -5,9 +5,9 @@ import ZIPFoundation
 
 enum PassGeneratorError: Error {
     case invalidPassJSON
-    case cannotGenerateKey
-    case cannotGenerateCertificate
-    case cannotGenerateSignature
+    case cannotGenerateKey(terminationStatus: Int32)
+    case cannotGenerateCertificate(terminationStatus: Int32)
+    case cannotGenerateSignature(terminationStatus: Int32)
 }
 
 public struct PassGenerator {
@@ -130,7 +130,7 @@ private extension PassGenerator {
             "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    throw PassGeneratorError.cannotGenerateCertificate
+                    throw PassGeneratorError.cannotGenerateSignature(terminationStatus: result)
                 }
             }
     }
@@ -173,7 +173,7 @@ public extension PassGenerator {
             "pass:" + password, on: eventLoop, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    throw PassGeneratorError.cannotGenerateKey
+                    throw PassGeneratorError.cannotGenerateKey(terminationStatus: result)
                 }
             }
     }
@@ -199,7 +199,7 @@ public extension PassGenerator {
             "pass:" + password, on: eventLoop, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    throw PassGeneratorError.cannotGenerateCertificate
+                    throw PassGeneratorError.cannotGenerateCertificate(terminationStatus: result)
                 }
             }
     }
