@@ -37,7 +37,7 @@ public struct PassGenerator {
     ///     - destination: The destination of the .pkpass to be saved, if nil the pass will be saved to the execution directory (generally the case if the result Data is used).
     ///     - eventLoop: Event loop to perform async task on.
     /// - returns: A future containing the data of the generated pass.
-    public func generatePass(_ pass: Pass, to destination: URL, on eventLoop: eventLoop) -> EventLoopFuture<Data> {
+    public func generatePass(_ pass: Pass, to destination: URL, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
         let temporaryDirectoryURL = destination.appendingPathComponent(UUID().uuidString)
         let passDirectoryURL = temporaryDirectoryURL.appendingPathComponent("pass")
         let pkpassURL = temporaryDirectoryURL.appendingPathComponent("pass.pkpass")
@@ -54,7 +54,7 @@ public struct PassGenerator {
             .flatMap { self.generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: self.wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: self.certificatePassword, on: eventLoop) }
             .flatMap { self.zipItems(in: passDirectoryURL, to: pkpassURL, on: eventLoop) }
             .flatMapThrowing { try Data(contentsOf: pkpassURL) }
-            .always { _ in try? self.fileManager.removeItem(at: temporaryDirectory) }
+            .always { _ in try? self.fileManager.removeItem(at: temporaryDirectoryURL) }
     }
 }
 
