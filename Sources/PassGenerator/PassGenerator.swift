@@ -3,7 +3,7 @@ import NIO
 import CryptoSwift
 import ZIPFoundation
 
-enum PassGeneratorError: Error {
+public enum PassGeneratorError: Error {
     case invalidPassJSON
     case cannotGenerateKey(terminationStatus: Int32)
     case cannotGenerateCertificate(terminationStatus: Int32)
