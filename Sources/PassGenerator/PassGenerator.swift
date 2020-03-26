@@ -110,7 +110,7 @@ private extension PassGenerator {
     
     func generateSignature(pemCertURL: URL, pemKeyURL: URL, wwdrURL: URL, manifestURL: URL, signatureURL: URL, certificatePassword: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
-            "openssl",
+            URL(fileURLWithPath: "/usr/bin/openssl"),
             "smime",
             "-sign",
             "-signer",
@@ -160,7 +160,7 @@ public extension PassGenerator {
     /// - returns: Empty future.
     static func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
-            "openssl",
+            URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
             "-in",
             certificateURL.path,
@@ -187,7 +187,7 @@ public extension PassGenerator {
     /// - returns: Empty future.
     static func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
-            "openssl",
+            URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
             "-in",
             certificateURL.path,

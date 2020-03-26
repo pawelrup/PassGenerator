@@ -23,7 +23,7 @@ extension Process {
     ///     - program: The name of the program to execute. If it does not begin with a `/`, the full
     ///                path will be resolved using `/bin/sh -c which ...`.
     ///     - arguments: An array of arguments to pass to the program.
-    public static func execute(_ program: String, _ arguments: String...) throws -> String {
+    public static func execute(_ program: URL, _ arguments: String...) throws -> String {
         return try execute(program, arguments)
     }
 
@@ -39,7 +39,7 @@ extension Process {
     ///     - program: The name of the program to execute. If it does not begin with a `/`, the full
     ///                path will be resolved using `/bin/sh -c which ...`.
     ///     - arguments: An array of arguments to pass to the program.
-    public static func execute(_ program: String, _ arguments: [String]) throws -> String {
+    public static func execute(_ program: URL, _ arguments: [String]) throws -> String {
         var stderr: String = ""
         var stdout: String = ""
         let status = try asyncExecute(program, arguments, on: EmbeddedEventLoop()) { (output: ProcessOutput) in
@@ -71,7 +71,7 @@ extension Process {
     ///     - worker: Worker to perform async task on.
     ///     - output: Handler for the process output.
     /// - returns: A future containing the termination status of the process.
-    public static func asyncExecute(_ program: String, _ arguments: String..., on eventLoop: EventLoop, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
+    public static func asyncExecute(_ program: URL, _ arguments: String..., on eventLoop: EventLoop, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
         return asyncExecute(program, arguments, on: eventLoop, output)
     }
 
@@ -90,8 +90,8 @@ extension Process {
     ///     - worker: Worker to perform async task on.
     ///     - output: Handler for the process output.
     /// - returns: A future containing the termination status of the process.
-    public static func asyncExecute(_ program: String, _ arguments: [String], on eventLoop: EventLoop, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
-        if program.hasPrefix("/") {
+    public static func asyncExecute(_ program: URL, _ arguments: [String], on eventLoop: EventLoop, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
+        if program.path.hasPrefix("/") {
             let stdout = Pipe()
             let stderr = Pipe()
 
@@ -132,15 +132,19 @@ extension Process {
              }
             let promise = eventLoop.makePromise(of: Int32.self)
             DispatchQueue.global().async {
-                let process = launchProcess(path: program, arguments, stdout: stdout, stderr: stderr)
-                process.waitUntilExit()
-                running = false
-                promise.completeWith(.success(process.terminationStatus))
+                do {
+                    let process = try launchProcess(at: program, arguments, stdout: stdout, stderr: stderr)
+                    process.waitUntilExit()
+                    running = false
+                    promise.completeWith(.success(process.terminationStatus))
+                } catch {
+                    promise.completeWith(.failure(error))
+                }
             }
             return promise.futureResult
         } else {
             var resolvedPath: String?
-            return asyncExecute("/bin/sh", ["-c", "which \(program)"], on: eventLoop, { (o: ProcessOutput) in
+            return asyncExecute(URL(fileURLWithPath: "/bin/sh"), ["-c", "which \(program.unixPath)"], on: eventLoop, { (o: ProcessOutput) in
                 switch o {
                 case .stdout(let data): resolvedPath = String(data: data, encoding: .utf8)?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -150,20 +154,20 @@ extension Process {
                 guard let path = resolvedPath, path.hasPrefix("/") else {
                     return eventLoop.makeFailedFuture(ProcessError.executablePathNotFound)
                 }
-                return asyncExecute(path, arguments, on: eventLoop, output)
+                return asyncExecute(URL(fileURLWithPath: path), arguments, on: eventLoop, output)
             }
         }
     }
 
     /// Powers `Process.execute(_:_:)` methods. Separated so that `/bin/sh -c which` can run as a separate command.
-    private static func launchProcess(path: String, _ arguments: [String], stdout: Pipe, stderr: Pipe) -> Process {
+    private static func launchProcess(at executableURL: URL, _ arguments: [String], stdout: Pipe, stderr: Pipe) throws -> Process {
         let process = Process()
         process.environment = ProcessInfo.processInfo.environment
-        process.launchPath = path
+        process.executableURL = executableURL
         process.arguments = arguments
         process.standardOutput = stdout
         process.standardError = stderr
-        process.launch()
+        try process.run()
         return process
     }
 }
@@ -182,4 +186,10 @@ public struct ProcessExecuteError: Error {
 
 public enum ProcessError: Error {
     case executablePathNotFound
+}
+
+private extension URL {
+    var unixPath: String {
+        absoluteString.replacingOccurrences(of: "file://", with: "")
+    }
 }
