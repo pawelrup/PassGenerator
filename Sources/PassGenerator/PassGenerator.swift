@@ -1,7 +1,6 @@
 import Foundation
 import NIO
 import CryptoSwift
-import ZIPFoundation
 
 public enum PassGeneratorError: Error {
     case invalidPassJSON
