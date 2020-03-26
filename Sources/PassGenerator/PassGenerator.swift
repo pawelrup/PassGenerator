@@ -1,14 +1,13 @@
 import Foundation
 import NIO
-import Core
 import CryptoSwift
 import ZIPFoundation
 
-enum PassGeneratorError: Error {
+public enum PassGeneratorError: Error {
     case invalidPassJSON
-    case cannotGenerateKey
-    case cannotGenerateCertificate
-    case cannotGenerateSignature
+    case cannotGenerateKey(terminationStatus: Int32)
+    case cannotGenerateCertificate(terminationStatus: Int32)
+    case cannotGenerateSignature(terminationStatus: Int32)
 }
 
 public struct PassGenerator {
@@ -16,7 +15,7 @@ public struct PassGenerator {
     private let certificateURL: URL
     private let certificatePassword: String
     private let wwdrURL: URL
-    private let templateDirectoryURL: URL
+    private let templateURL: URL
     private let fileManager = FileManager.default
     
     /// Creates a new `WalletKit`.
@@ -24,57 +23,49 @@ public struct PassGenerator {
     ///     - certificateURL: URL to the pass certificate.
     ///     - certificatePassword: Password of the pass certificate.
     ///     - wwdrURL: URL to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
-    ///     - templateDirectoryURL: URL of the template to be used for the pass, containing the images etc.
-    public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateDirectoryURL: URL) {
+    ///     - templateURL: URL of the template to be used for the pass, containing the images etc.
+    public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateURL: URL) {
         self.certificateURL = certificateURL
         self.certificatePassword = certificatePassword
         self.wwdrURL = wwdrURL
-        self.templateDirectoryURL = templateDirectoryURL
+        self.templateURL = templateURL
     }
     
     /// Generate a signed .pkpass file
     /// - parameters:
     ///     - pass: A Pass object containing all pass information, ensure the `passTypeIdentifier` and `teamIdentifier` match those in supplied certificate.
     ///     - destination: The destination of the .pkpass to be saved, if nil the pass will be saved to the execution directory (generally the case if the result Data is used).
-    ///     - arguments: An array of arguments to pass to the program.
-    ///     - worker: Worker to perform async task on.
+    ///     - eventLoop: Event loop to perform async task on.
     /// - returns: A future containing the data of the generated pass.
-    public func generatePass(pass: Pass, destination: URL? = nil, on eventLoop: EventLoop) throws -> EventLoopFuture<Data> {
-        let directory = URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true)
-        let temporaryDirectory = directory.appendingPathComponent(UUID().uuidString)
-        let passDirectory = temporaryDirectory.appendingPathComponent("pass")
-        let destinationURL = (destination ?? temporaryDirectory).appendingPathComponent("pass.pkpass")
+    public func generatePass(_ pass: Pass, to destination: URL, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
+        let temporaryDirectoryURL = destination.appendingPathComponent(UUID().uuidString)
+        let passDirectoryURL = temporaryDirectoryURL.appendingPathComponent("pass")
+        let pkpassURL = temporaryDirectoryURL.appendingPathComponent("pass.pkpass")
+        let manifestURL = passDirectoryURL.appendingPathComponent("manifest.json")
+        let signatureURL = passDirectoryURL.appendingPathComponent("signature")
+        let pemKeyURL = temporaryDirectoryURL.appendingPathComponent("key.pem")
+        let pemCertURL = temporaryDirectoryURL.appendingPathComponent("cert.pem")
         
-        let prepare = preparePass(pass: pass, temporaryDirectory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop)
+        let prepare = preparePass(pass, temporaryDirectory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop)
         return prepare
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateManifest(directory: passDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateKey(directory: temporaryDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateCertificate(directory: temporaryDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.generateSignature(directory: temporaryDirectory, passDirectory: passDirectory, on: eventLoop)
-            }
-            .flatMap { (_) -> EventLoopFuture<Void> in
-                self.zipPass(passURL: passDirectory, zipURL: destinationURL, on: eventLoop)
-            }
-            .thenThrowing { try Data(contentsOf: destinationURL) }
-            .always { try? self.fileManager.removeItem(at: temporaryDirectory) }
+            .flatMap { self.generateManifest(for: passDirectoryURL, in: manifestURL, on: eventLoop) }
+            .flatMap { Self.generatePemKey(from: self.certificateURL, to: pemKeyURL, password: self.certificatePassword, on: eventLoop) }
+            .flatMap { Self.generatePemCertificate(from: self.certificateURL, to: pemCertURL, password: self.certificatePassword, on: eventLoop) }
+            .flatMap { self.generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: self.wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: self.certificatePassword, on: eventLoop) }
+            .flatMap { self.zipItems(in: passDirectoryURL, to: pkpassURL, on: eventLoop) }
+            .flatMapThrowing { try Data(contentsOf: pkpassURL) }
+            .always { _ in try? self.fileManager.removeItem(at: temporaryDirectoryURL) }
     }
 }
 
 private extension PassGenerator {
     
-    func preparePass(pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
+    func preparePass(_ pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
                 try self.fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
-                try self.fileManager.copyItem(at: self.templateDirectoryURL, to: passDirectory)
+                try self.fileManager.copyItem(at: self.templateURL, to: passDirectory)
                 
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy-MM-dd'T'HH:mmZZZZZ"
@@ -87,112 +78,129 @@ private extension PassGenerator {
                     throw PassGeneratorError.invalidPassJSON
                 }
                 let passURL = passDirectory.appendingPathComponent("pass.json")
-                self.fileManager.createFile(atPath: passURL.path, contents: passData, attributes: nil)
-                promise.succeed(result: ())
+                try passData.write(to: passURL)
+                promise.succeed(())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult
     }
     
-    func generateManifest(directory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
+    func generateManifest(for directoryURL: URL, in manifestURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
-                let contents = try self.fileManager.contentsOfDirectory(atPath: directory.path)
+                let contents = try self.fileManager.contentsOfDirectory(atPath: directoryURL.path)
                 var manifest: [String: String] = [:]
                 contents.forEach({ (item) in
-                    let itemPath = directory.appendingPathComponent(item).path
+                    let itemPath = directoryURL.appendingPathComponent(item).path
                     guard let data = self.fileManager.contents(atPath: itemPath) else { return }
                     manifest[item] = data.sha1().toHexString()
                 })
                 let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
-                let manifestPath = directory.appendingPathComponent("manifest.json").path
-                self.fileManager.createFile(atPath: manifestPath, contents: manifestData, attributes: nil)
-                promise.succeed(result: ())
+                try manifestData.write(to: manifestURL)
+                promise.succeed(())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult
     }
     
-    func generateKey(directory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let keyPath = directory.appendingPathComponent("key.pem")
+    func generateSignature(pemCertURL: URL, pemKeyURL: URL, wwdrURL: URL, manifestURL: URL, signatureURL: URL, certificatePassword: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
-            "openssl",
+            URL(fileURLWithPath: "/usr/bin/openssl"),
+            "smime",
+            "-sign",
+            "-signer",
+            pemCertURL.path,
+            "-inkey",
+            pemKeyURL.path,
+            "-certfile",
+            wwdrURL.path,
+            "-in",
+            manifestURL.path,
+            "-out",
+            signatureURL.path,
+            "-outform",
+            "der",
+            "-binary",
+            "-passin",
+            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing { result in
+                guard result == 0 else {
+                    throw PassGeneratorError.cannotGenerateSignature(terminationStatus: result)
+                }
+            }
+    }
+    
+    func zipItems(in directoryURL: URL, to zipURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        let promise = eventLoop.makePromise(of: Void.self)
+        DispatchQueue.global().async {
+            do {
+                try self.fileManager.zipItem(at: directoryURL, to: zipURL, shouldKeepParent: false)
+                promise.succeed(())
+            } catch {
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+}
+
+public extension PassGenerator {
+    
+    /// Generate a pem key from certificate
+    /// - parameters:
+    ///     - certificateURL: Pass .p12 certificate url.
+    ///     - pemKeyURL: Destination url of .pem key file
+    ///     - password: Passowrd of certificate.
+    ///     - eventLoop: Event loop to perform async task on.
+    /// - returns: Empty future.
+    static func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return Process.asyncExecute(
+            URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
             "-in",
             certificateURL.path,
             "-nocerts",
             "-out",
-            keyPath.path,
+            pemKeyURL.path,
             "-passin",
-            "pass:" + certificatePassword,
+            "pass:" + password,
             "-passout",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing({ result in
+            "pass:" + password, on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing { result in
                 guard result == 0 else {
-                    throw PassGeneratorError.cannotGenerateKey
+                    throw PassGeneratorError.cannotGenerateKey(terminationStatus: result)
                 }
-            })
+            }
     }
     
-    func generateCertificate(directory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let certURL = directory.appendingPathComponent("cert.pem")
+    /// Generate a pem key from certificate
+    /// - parameters:
+    ///     - certificateURL: Pass .p12 certificate url.
+    ///     - pemKeyURL: Destination url of .pem certificate file
+    ///     - password: Passowrd of certificate.
+    ///     - eventLoop: Event loop to perform async task on.
+    /// - returns: Empty future.
+    static func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
-            "openssl",
+            URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
             "-in",
             certificateURL.path,
             "-clcerts",
             "-nokeys",
             "-out",
-            certURL.path,
+            pemCertURL.path,
             "-passin",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing { result in
+            "pass:" + password, on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing { result in
                 guard result == 0 else {
-                    throw PassGeneratorError.cannotGenerateCertificate
+                    throw PassGeneratorError.cannotGenerateCertificate(terminationStatus: result)
                 }
-        }
-    }
-    
-    func generateSignature(directory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        return Process.asyncExecute(
-            "openssl",
-            "smime",
-            "-sign",
-            "-signer",
-            directory.appendingPathComponent("cert.pem").path,
-            "-inkey",
-            directory.appendingPathComponent("key.pem").path,
-            "-certfile",
-            wwdrURL.path,
-            "-in",
-            passDirectory.appendingPathComponent("manifest.json").path,
-            "-out",
-            passDirectory.appendingPathComponent("signature").path,
-            "-outform",
-            "der",
-            "-binary",
-            "-passin",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in }).thenThrowing { result in
-                guard result == 0 else {
-                    throw PassGeneratorError.cannotGenerateCertificate
-                }
-        }
-    }
-    
-    func zipPass(passURL: URL, zipURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
-        DispatchQueue.global().async {
-            do {
-                try self.fileManager.zipItem(at: passURL, to: zipURL, shouldKeepParent: false)
-                promise.succeed(result: ())
-            } catch {
-                promise.fail(error: error)
             }
-        }
-        return promise.futureResult
     }
 }

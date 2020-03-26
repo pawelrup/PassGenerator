@@ -26,6 +26,8 @@ public protocol StoreCard: PassConvertible {
     var secondaryFields: [PassField] { get }
     var passBarcodeAltText: String { get }
     var passBarcodeMessage: String { get }
+    var authenticationToken: String? { get }
+    var webServiceURL: String? { get }
     var semantics: PassSemantics? { get }
 }
 
@@ -52,6 +54,8 @@ extension StoreCard {
             foregroundColor: foregroundColor,
             labelColor: labelColor,
             stripColor: stripColor,
+            authenticationToken: authenticationToken,
+            webServiceURL: webServiceURL,
             semantics: semantics)
     }
 }
