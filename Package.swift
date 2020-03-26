@@ -5,11 +5,10 @@ import PackageDescription
 
 let dependencies: [PackageDescription.Package.Dependency] = [
     .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.12.0")),
-    .package(url: "https://github.com/weichsel/ZIPFoundation.git", .upToNextMajor(from: "0.9.10")),
     .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMajor(from: "1.2.0"))
 ]
 let targets: [Target] = [
-    .target(name: "PassGenerator", dependencies: ["NIO", "ZIPFoundation", "CryptoSwift"]),
+    .target(name: "PassGenerator", dependencies: ["NIO", "CryptoSwift"]),
     .testTarget(name: "PassGeneratorTests", dependencies: ["PassGenerator"])
 ]
 let products: [Product] = [

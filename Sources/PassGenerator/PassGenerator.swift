@@ -8,6 +8,7 @@ public enum PassGeneratorError: Error {
     case cannotGenerateKey(terminationStatus: Int32)
     case cannotGenerateCertificate(terminationStatus: Int32)
     case cannotGenerateSignature(terminationStatus: Int32)
+    case cannotZip(terminationStatus: Int32)
 }
 
 public struct PassGenerator {
@@ -136,16 +137,19 @@ private extension PassGenerator {
     }
     
     func zipItems(in directoryURL: URL, to zipURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
-        DispatchQueue.global().async {
-            do {
-                try self.fileManager.zipItem(at: directoryURL, to: zipURL, shouldKeepParent: false)
-                promise.succeed(())
-            } catch {
-                promise.fail(error)
+        Process.asyncExecute(
+            URL(fileURLWithPath: "/usr/bin/zip"),
+            in: directoryURL,
+            zipURL.unixPath,
+            "-r",
+            "-q",
+            ".",
+            on: eventLoop, { (_: ProcessOutput) in })
+            .flatMapThrowing { result in
+                guard result == 0 else {
+                    throw PassGeneratorError.cannotZip(terminationStatus: result)
+                }
             }
-        }
-        return promise.futureResult
     }
 }
 
