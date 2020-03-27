@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -8,7 +8,10 @@ let dependencies: [PackageDescription.Package.Dependency] = [
     .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMajor(from: "1.2.0"))
 ]
 let targets: [Target] = [
-    .target(name: "PassGenerator", dependencies: ["NIO", "CryptoSwift"]),
+    .target(name: "PassGenerator", dependencies: [
+        .product(name: "NIO", package: "swift-nio"),
+        "CryptoSwift"
+    ]),
     .testTarget(name: "PassGeneratorTests", dependencies: ["PassGenerator"])
 ]
 let products: [Product] = [
