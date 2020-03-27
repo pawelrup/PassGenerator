@@ -4,8 +4,8 @@
 import PackageDescription
 
 let dependencies: [PackageDescription.Package.Dependency] = [
-    .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.12.0")),
-    .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMajor(from: "1.2.0"))
+    .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.15.0")),
+    .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMajor(from: "1.3.0"))
 ]
 let targets: [Target] = [
     .target(name: "PassGenerator", dependencies: [
