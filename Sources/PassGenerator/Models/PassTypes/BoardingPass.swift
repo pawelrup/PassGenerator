@@ -14,6 +14,7 @@ public protocol BoardingPass: PassConvertible {
     var serialNumber: String { get }
     var teamIdentifier: String { get }
     var relevantDate: Date { get }
+    var expirationDate: Date { get }
     var backgroundColor: String { get }
     var foregroundColor: String { get }
     var labelColor: String { get }
@@ -58,6 +59,7 @@ extension BoardingPass {
             passTypeIdentifier: passTypeIdentifier,
             serialNumber: serialNumber,
             teamIdentifier: teamIdentifier,
+            expirationDate: expirationDate,
             locations: locations,
             relevantDate: relevantDate,
             boardingPass: passStructure,
