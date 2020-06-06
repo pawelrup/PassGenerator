@@ -1,5 +1,6 @@
 import Foundation
 import NIO
+import Logging
 
 /// Different types of process output.
 public enum ProcessOutput {
@@ -23,8 +24,8 @@ extension Process {
     ///     - program: The name of the program to execute. If it does not begin with a `/`, the full
     ///                path will be resolved using `/bin/sh -c which ...`.
     ///     - arguments: An array of arguments to pass to the program.
-    public static func execute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String...) throws -> String {
-        return try execute(program, in: currentDirectoryURL, arguments)
+    public static func execute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String..., logger: Logger? = nil) throws -> String {
+        return try execute(program, in: currentDirectoryURL, arguments, logger: logger)
     }
 
     /// Executes the supplied program in a new process, blocking until the process completes.
@@ -39,7 +40,7 @@ extension Process {
     ///     - program: The name of the program to execute. If it does not begin with a `/`, the full
     ///                path will be resolved using `/bin/sh -c which ...`.
     ///     - arguments: An array of arguments to pass to the program.
-    public static func execute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: [String]) throws -> String {
+    public static func execute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: [String], logger: Logger? = nil) throws -> String {
         var stderr: String = ""
         var stdout: String = ""
         let status = try asyncExecute(program, in: currentDirectoryURL, arguments, on: EmbeddedEventLoop()) { (output: ProcessOutput) in
@@ -71,7 +72,7 @@ extension Process {
     ///     - worker: Worker to perform async task on.
     ///     - output: Handler for the process output.
     /// - returns: A future containing the termination status of the process.
-    public static func asyncExecute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String..., on eventLoop: EventLoop, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
+    public static func asyncExecute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String..., on eventLoop: EventLoop, logger: Logger? = nil, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
         return asyncExecute(program, in: currentDirectoryURL, arguments, on: eventLoop, output)
     }
 
@@ -90,7 +91,7 @@ extension Process {
     ///     - worker: Worker to perform async task on.
     ///     - output: Handler for the process output.
     /// - returns: A future containing the termination status of the process.
-    public static func asyncExecute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: [String], on eventLoop: EventLoop, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
+    public static func asyncExecute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: [String], on eventLoop: EventLoop, logger: Logger? = nil, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
         if program.path.hasPrefix("/") {
             let stdout = Pipe()
             let stderr = Pipe()
@@ -138,6 +139,7 @@ extension Process {
                     running = false
                     promise.completeWith(.success(process.terminationStatus))
                 } catch {
+                    logger?.error("Launching process failed")
                     promise.completeWith(.failure(error))
                 }
             }
@@ -152,6 +154,7 @@ extension Process {
                 }
             }).flatMap { status in
                 guard let path = resolvedPath, path.hasPrefix("/") else {
+                    logger?.error("Process error: executable path not found")
                     return eventLoop.makeFailedFuture(ProcessError.executablePathNotFound)
                 }
                 return asyncExecute(URL(fileURLWithPath: path), in: currentDirectoryURL, arguments, on: eventLoop, output)

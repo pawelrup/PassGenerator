@@ -1,5 +1,6 @@
 import Foundation
 import NIO
+import Logging
 import CryptoSwift
 
 public enum PassGeneratorError: Error {
@@ -16,6 +17,7 @@ public struct PassGenerator {
     private let certificatePassword: String
     private let wwdrURL: URL
     private let templateURL: URL
+    private let logger: Logger
     private let fileManager = FileManager.default
     
     /// Creates a new `WalletKit`.
@@ -24,11 +26,12 @@ public struct PassGenerator {
     ///     - certificatePassword: Password of the pass certificate.
     ///     - wwdrURL: URL to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
     ///     - templateURL: URL of the template to be used for the pass, containing the images etc.
-    public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateURL: URL) {
+    public init(certificateURL: URL, certificatePassword: String, wwdrURL: URL, templateURL: URL, logger: Logger) {
         self.certificateURL = certificateURL
         self.certificatePassword = certificatePassword
         self.wwdrURL = wwdrURL
         self.templateURL = templateURL
+        self.logger = logger
     }
     
     /// Generate a signed .pkpass file
@@ -49,8 +52,8 @@ public struct PassGenerator {
         let prepare = preparePass(pass, temporaryDirectory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop)
         return prepare
             .flatMap { self.generateManifest(for: passDirectoryURL, in: manifestURL, on: eventLoop) }
-            .flatMap { Self.generatePemKey(from: self.certificateURL, to: pemKeyURL, password: self.certificatePassword, on: eventLoop) }
-            .flatMap { Self.generatePemCertificate(from: self.certificateURL, to: pemCertURL, password: self.certificatePassword, on: eventLoop) }
+            .flatMap { Self.generatePemKey(from: self.certificateURL, to: pemKeyURL, password: self.certificatePassword, on: eventLoop, logger: self.logger) }
+            .flatMap { Self.generatePemCertificate(from: self.certificateURL, to: pemCertURL, password: self.certificatePassword, on: eventLoop, logger: self.logger) }
             .flatMap { self.generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: self.wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: self.certificatePassword, on: eventLoop) }
             .flatMap { self.zipItems(in: passDirectoryURL, to: pkpassURL, on: eventLoop) }
             .flatMapThrowing { try Data(contentsOf: pkpassURL) }
@@ -59,6 +62,10 @@ public struct PassGenerator {
 }
 
 private extension PassGenerator {
+    private func fileExists(at url: URL, isDirectory: Bool = false) -> Bool {
+        var isDirectory: ObjCBool = ObjCBool(isDirectory)
+        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
+    }
     
     func preparePass(_ pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
@@ -81,6 +88,7 @@ private extension PassGenerator {
                 try passData.write(to: passURL)
                 promise.succeed(())
             } catch {
+                self.logger.error("PassGenerator failed to prepare pass")
                 promise.fail(error)
             }
         }
@@ -102,6 +110,7 @@ private extension PassGenerator {
                 try manifestData.write(to: manifestURL)
                 promise.succeed(())
             } catch {
+                self.logger.error("PassGenerator failed to generate manifest")
                 promise.fail(error)
             }
         }
@@ -127,9 +136,11 @@ private extension PassGenerator {
             "der",
             "-binary",
             "-passin",
-            "pass:" + certificatePassword, on: eventLoop, { (_: ProcessOutput) in })
+            "pass:" + certificatePassword, on: eventLoop,
+            logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
+                    self.logger.error("PassGenerator failed to generate signature with result \(result)")
                     throw PassGeneratorError.cannotGenerateSignature(terminationStatus: result)
                 }
             }
@@ -143,9 +154,11 @@ private extension PassGenerator {
             "-r",
             "-q",
             ".",
-            on: eventLoop, { (_: ProcessOutput) in })
+            on: eventLoop,
+            logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
+                    self.logger.error("PassGenerator failed to zip items with result \(result)")
                     throw PassGeneratorError.cannotZip(terminationStatus: result)
                 }
             }
@@ -161,7 +174,7 @@ public extension PassGenerator {
     ///     - password: Passowrd of certificate.
     ///     - eventLoop: Event loop to perform async task on.
     /// - returns: Empty future.
-    static func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+    static func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String, on eventLoop: EventLoop, logger: Logger? = nil) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
             URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
@@ -173,9 +186,11 @@ public extension PassGenerator {
             "-passin",
             "pass:" + password,
             "-passout",
-            "pass:" + password, on: eventLoop, { (_: ProcessOutput) in })
+            "pass:" + password, on: eventLoop,
+            logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
+                    logger?.error("PassGenerator failed to generate pem key with result \(result)")
                     throw PassGeneratorError.cannotGenerateKey(terminationStatus: result)
                 }
             }
@@ -188,7 +203,7 @@ public extension PassGenerator {
     ///     - password: Passowrd of certificate.
     ///     - eventLoop: Event loop to perform async task on.
     /// - returns: Empty future.
-    static func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+    static func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String, on eventLoop: EventLoop, logger: Logger? = nil) -> EventLoopFuture<Void> {
         return Process.asyncExecute(
             URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
@@ -199,9 +214,11 @@ public extension PassGenerator {
             "-out",
             pemCertURL.path,
             "-passin",
-            "pass:" + password, on: eventLoop, { (_: ProcessOutput) in })
+            "pass:" + password, on: eventLoop,
+            logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
+                    logger?.error("PassGenerator failed to generate pem certificate with result \(result)")
                     throw PassGeneratorError.cannotGenerateCertificate(terminationStatus: result)
                 }
             }
