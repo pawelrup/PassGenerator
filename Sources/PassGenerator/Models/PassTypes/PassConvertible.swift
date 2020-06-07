@@ -6,5 +6,5 @@
 //
 
 public protocol PassConvertible {
-    var pass: Pass { get }
+	var pass: Pass { get }
 }
