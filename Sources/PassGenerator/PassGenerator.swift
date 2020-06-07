@@ -72,11 +72,6 @@ public struct PassGenerator {
 }
 
 private extension PassGenerator {
-    private func fileExists(at url: URL, isDirectory: Bool = false) -> Bool {
-        var isDirectory: ObjCBool = ObjCBool(isDirectory)
-        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
-    }
-    
     func preparePass(_ pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: try prepare pass")
         let promise = eventLoop.makePromise(of: Void.self)
