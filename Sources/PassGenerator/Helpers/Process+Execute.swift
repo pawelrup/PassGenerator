@@ -43,7 +43,7 @@ extension Process {
     public static func execute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: [String], logger: Logger? = nil) throws -> String {
         var stderr: String = ""
         var stdout: String = ""
-        let status = try asyncExecute(program, in: currentDirectoryURL, arguments, on: EmbeddedEventLoop()) { (output: ProcessOutput) in
+        let status = try asyncExecute(program, in: currentDirectoryURL, arguments, on: EmbeddedEventLoop(), logger: logger) { (output: ProcessOutput) in
             switch output {
             case .stderr(let data):
                 stderr += String(data: data, encoding: .utf8) ?? ""
@@ -73,7 +73,7 @@ extension Process {
     ///     - output: Handler for the process output.
     /// - returns: A future containing the termination status of the process.
     public static func asyncExecute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String..., on eventLoop: EventLoop, logger: Logger? = nil, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
-        return asyncExecute(program, in: currentDirectoryURL, arguments, on: eventLoop, output)
+        return asyncExecute(program, in: currentDirectoryURL, arguments, on: eventLoop, logger: logger, output)
     }
 
     /// Asynchronously the supplied program in a new process. Stderr and stdout will be supplied to the output closure
@@ -139,7 +139,7 @@ extension Process {
                     running = false
                     promise.completeWith(.success(process.terminationStatus))
                 } catch {
-                    logger?.error("Launching process failed")
+                    logger?.error("[ PassGenerator ][ Process ] 👷‍♂️ Launching process failed")
                     promise.completeWith(.failure(error))
                 }
             }
@@ -154,7 +154,7 @@ extension Process {
                 }
             }).flatMap { status in
                 guard let path = resolvedPath, path.hasPrefix("/") else {
-                    logger?.error("Process error: executable path not found")
+                    logger?.error("[ PassGenerator ][ Process ] 👷‍♂️ Executable path not found")
                     return eventLoop.makeFailedFuture(ProcessError.executablePathNotFound)
                 }
                 return asyncExecute(URL(fileURLWithPath: path), in: currentDirectoryURL, arguments, on: eventLoop, output)

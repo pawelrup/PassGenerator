@@ -41,6 +41,7 @@ public struct PassGenerator {
     ///     - eventLoop: Event loop to perform async task on.
     /// - returns: A future containing the data of the generated pass.
     public func generatePass(_ pass: Pass, to destination: URL, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
+        logger.debug("[ PassGenerator ] 👷‍♂️ try prepare URLs")
         let temporaryDirectoryURL = destination.appendingPathComponent(UUID().uuidString)
         let passDirectoryURL = temporaryDirectoryURL.appendingPathComponent("pass")
         let pkpassURL = temporaryDirectoryURL.appendingPathComponent("pass.pkpass")
@@ -48,6 +49,15 @@ public struct PassGenerator {
         let signatureURL = passDirectoryURL.appendingPathComponent("signature")
         let pemKeyURL = temporaryDirectoryURL.appendingPathComponent("key.pem")
         let pemCertURL = temporaryDirectoryURL.appendingPathComponent("cert.pem")
+        logger.debug("[ PassGenerator ] 👷‍♂️ URLs prepared", metadata: [
+            "temporaryDirectoryURL": .stringConvertible(temporaryDirectoryURL),
+            "passDirectoryURL": .stringConvertible(passDirectoryURL),
+            "pkpassURL": .stringConvertible(pkpassURL),
+            "manifestURL": .stringConvertible(manifestURL),
+            "signatureURL": .stringConvertible(signatureURL),
+            "pemKeyURL": .stringConvertible(pemKeyURL),
+            "pemCertURL": .stringConvertible(pemCertURL)
+        ])
         
         let prepare = preparePass(pass, temporaryDirectory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop)
         return prepare
@@ -68,10 +78,18 @@ private extension PassGenerator {
     }
     
     func preparePass(_ pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: try prepare pass")
         let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: create directory", metadata: [
+                    "temporaryDirectory": .stringConvertible(temporaryDirectory)
+                ])
                 try self.fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: copy item", metadata: [
+                    "from templateURL": .stringConvertible(self.templateURL),
+                    "to passDirectory": .stringConvertible(passDirectory)
+                ])
                 try self.fileManager.copyItem(at: self.templateURL, to: passDirectory)
                 
                 let formatter = DateFormatter()
@@ -82,13 +100,18 @@ private extension PassGenerator {
                 do {
                     passData = try jsonEncoder.encode(pass)
                 } catch {
+                    self.logger.error("[ PassGenerator ] 👷‍♂️ preparePass: invalid json")
                     throw PassGeneratorError.invalidPassJSON
                 }
                 let passURL = passDirectory.appendingPathComponent("pass.json")
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: try write pass json", metadata: [
+                    "to passURL": .stringConvertible(passURL)
+                ])
                 try passData.write(to: passURL)
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: prepare pass succeed")
                 promise.succeed(())
             } catch {
-                self.logger.error("PassGenerator failed to prepare pass")
+                self.logger.error("[ PassGenerator ] 👷‍♂️ preparePass: failed to prepare pass")
                 promise.fail(error)
             }
         }
@@ -96,17 +119,29 @@ private extension PassGenerator {
     }
     
     func generateManifest(for directoryURL: URL, in manifestURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: try generate manifest")
         let promise = eventLoop.makePromise(of: Void.self)
         DispatchQueue.global().async {
             do {
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of directory", metadata: [
+                    "directoryURL": .stringConvertible(directoryURL)
+                ])
                 let contents = try self.fileManager.contentsOfDirectory(atPath: directoryURL.path)
                 var manifest: [String: String] = [:]
                 contents.forEach({ (item) in
                     let itemPath = directoryURL.appendingPathComponent(item).path
+                    self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of item", metadata: [
+                        "item": .string(item)
+                    ])
                     guard let data = self.fileManager.contents(atPath: itemPath) else { return }
+                    self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: generate sha1")
                     manifest[item] = data.sha1().toHexString()
                 })
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: serialize manifest")
                 let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
+                self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: try write manifest", metadata: [
+                    "manifestURL": .stringConvertible(manifestURL)
+                ])
                 try manifestData.write(to: manifestURL)
                 promise.succeed(())
             } catch {
@@ -118,6 +153,13 @@ private extension PassGenerator {
     }
     
     func generateSignature(pemCertURL: URL, pemKeyURL: URL, wwdrURL: URL, manifestURL: URL, signatureURL: URL, certificatePassword: String, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        logger.debug("[ PassGenerator ] 👷‍♂️ generateSignature: try generate signature", metadata: [
+            "pemCertURL": .stringConvertible(pemCertURL),
+            "pemKeyURL": .stringConvertible(pemKeyURL),
+            "wwdrURL": .stringConvertible(wwdrURL),
+            "manifestURL": .stringConvertible(manifestURL),
+            "signatureURL": .stringConvertible(signatureURL)
+        ])
         return Process.asyncExecute(
             URL(fileURLWithPath: "/usr/bin/openssl"),
             "smime",
@@ -140,14 +182,18 @@ private extension PassGenerator {
             logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    self.logger.error("PassGenerator failed to generate signature with result \(result)")
+                    self.logger.error("[ PassGenerator ] 👷‍♂️ generateSignature: failed to generate signature with result \(result)")
                     throw PassGeneratorError.cannotGenerateSignature(terminationStatus: result)
                 }
             }
     }
     
     func zipItems(in directoryURL: URL, to zipURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        Process.asyncExecute(
+        logger.debug("[ PassGenerator ] 👷‍♂️ generateSignature: try zip items", metadata: [
+            "directoryURL": .stringConvertible(directoryURL),
+            "zipURL": .stringConvertible(zipURL)
+        ])
+        return Process.asyncExecute(
             URL(fileURLWithPath: "/usr/bin/zip"),
             in: directoryURL,
             zipURL.unixPath,
@@ -158,7 +204,7 @@ private extension PassGenerator {
             logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    self.logger.error("PassGenerator failed to zip items with result \(result)")
+                    self.logger.error("[ PassGenerator ] 👷‍♂️ generateSignature: failed to zip items with result \(result)")
                     throw PassGeneratorError.cannotZip(terminationStatus: result)
                 }
             }
@@ -175,6 +221,10 @@ public extension PassGenerator {
     ///     - eventLoop: Event loop to perform async task on.
     /// - returns: Empty future.
     static func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String, on eventLoop: EventLoop, logger: Logger? = nil) -> EventLoopFuture<Void> {
+        logger?.debug("[ PassGenerator ] 👷‍♂️ generateSignature: try generate pem key", metadata: [
+            "certificateURL": .stringConvertible(certificateURL),
+            "pemKeyURL": .stringConvertible(pemKeyURL)
+        ])
         return Process.asyncExecute(
             URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
@@ -190,7 +240,7 @@ public extension PassGenerator {
             logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    logger?.error("PassGenerator failed to generate pem key with result \(result)")
+                    logger?.error("[ PassGenerator ] 👷‍♂️ generateSignature: failed to generate pem key with result \(result)")
                     throw PassGeneratorError.cannotGenerateKey(terminationStatus: result)
                 }
             }
@@ -204,6 +254,10 @@ public extension PassGenerator {
     ///     - eventLoop: Event loop to perform async task on.
     /// - returns: Empty future.
     static func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String, on eventLoop: EventLoop, logger: Logger? = nil) -> EventLoopFuture<Void> {
+        logger?.debug("[ PassGenerator ] 👷‍♂️ generateSignature: try generate pem certificate", metadata: [
+            "certificateURL": .stringConvertible(certificateURL),
+            "pemCertURL": .stringConvertible(pemCertURL)
+        ])
         return Process.asyncExecute(
             URL(fileURLWithPath: "/usr/bin/openssl"),
             "pkcs12",
@@ -218,7 +272,7 @@ public extension PassGenerator {
             logger: logger, { (_: ProcessOutput) in })
             .flatMapThrowing { result in
                 guard result == 0 else {
-                    logger?.error("PassGenerator failed to generate pem certificate with result \(result)")
+                    logger?.error("[ PassGenerator ] 👷‍♂️ generateSignature: failed to generate pem certificate with result \(result)")
                     throw PassGeneratorError.cannotGenerateCertificate(terminationStatus: result)
                 }
             }
