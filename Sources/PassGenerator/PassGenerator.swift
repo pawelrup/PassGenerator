@@ -61,13 +61,13 @@ public struct PassGenerator {
 		
 		let prepare = preparePass(pass, temporaryDirectory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop)
 		return prepare
-			.flatMap { self.generateManifest(for: passDirectoryURL, in: manifestURL, on: eventLoop) }
-			.flatMap { Self.generatePemKey(from: self.certificateURL, to: pemKeyURL, password: self.certificatePassword, on: eventLoop, logger: self.logger) }
-			.flatMap { Self.generatePemCertificate(from: self.certificateURL, to: pemCertURL, password: self.certificatePassword, on: eventLoop, logger: self.logger) }
-			.flatMap { self.generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: self.wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: self.certificatePassword, on: eventLoop) }
-			.flatMap { self.zipItems(in: passDirectoryURL, to: pkpassURL, on: eventLoop) }
+			.flatMap { generateManifest(for: passDirectoryURL, in: manifestURL, on: eventLoop) }
+			.flatMap { Self.generatePemKey(from: certificateURL, to: pemKeyURL, password: certificatePassword, on: eventLoop, logger: logger) }
+			.flatMap { Self.generatePemCertificate(from: certificateURL, to: pemCertURL, password: certificatePassword, on: eventLoop, logger: logger) }
+			.flatMap { generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: certificatePassword, on: eventLoop) }
+			.flatMap { zipItems(in: passDirectoryURL, to: pkpassURL, on: eventLoop) }
 			.flatMapThrowing { try Data(contentsOf: pkpassURL) }
-			.always { _ in try? self.fileManager.removeItem(at: temporaryDirectoryURL) }
+			.always { _ in try? fileManager.removeItem(at: temporaryDirectoryURL) }
 	}
 }
 
@@ -77,15 +77,15 @@ private extension PassGenerator {
 		let promise = eventLoop.makePromise(of: Void.self)
 		DispatchQueue.global().async {
 			do {
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: create directory", metadata: [
+				logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: create directory", metadata: [
 					"temporaryDirectory": .stringConvertible(temporaryDirectory)
 				])
-				try self.fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: copy item", metadata: [
-					"from templateURL": .stringConvertible(self.templateURL),
+				try fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
+				logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: copy item", metadata: [
+					"from templateURL": .stringConvertible(templateURL),
 					"to passDirectory": .stringConvertible(passDirectory)
 				])
-				try self.fileManager.copyItem(at: self.templateURL, to: passDirectory)
+				try fileManager.copyItem(at: templateURL, to: passDirectory)
 				
 				let formatter = DateFormatter()
 				formatter.dateFormat = "yyyy-MM-dd'T'HH:mmZZZZZ"
@@ -95,18 +95,18 @@ private extension PassGenerator {
 				do {
 					passData = try jsonEncoder.encode(pass)
 				} catch {
-					self.logger.error("[ PassGenerator ] 👷‍♂️ preparePass: invalid json")
+					logger.error("[ PassGenerator ] 👷‍♂️ preparePass: invalid json")
 					throw PassGeneratorError.invalidPassJSON
 				}
 				let passURL = passDirectory.appendingPathComponent("pass.json")
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: try write pass json", metadata: [
+				logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: try write pass json", metadata: [
 					"to passURL": .stringConvertible(passURL)
 				])
 				try passData.write(to: passURL)
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: prepare pass succeed")
+				logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: prepare pass succeed")
 				promise.succeed(())
 			} catch {
-				self.logger.error("[ PassGenerator ] 👷‍♂️ preparePass: failed to prepare pass")
+				logger.error("[ PassGenerator ] 👷‍♂️ preparePass: failed to prepare pass")
 				promise.fail(error)
 			}
 		}
@@ -118,29 +118,29 @@ private extension PassGenerator {
 		let promise = eventLoop.makePromise(of: Void.self)
 		DispatchQueue.global().async {
 			do {
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of directory", metadata: [
+				logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of directory", metadata: [
 					"directoryURL": .stringConvertible(directoryURL)
 				])
-				let contents = try self.fileManager.contentsOfDirectory(atPath: directoryURL.path)
+				let contents = try fileManager.contentsOfDirectory(atPath: directoryURL.path)
 				var manifest: [String: String] = [:]
 				contents.forEach({ (item) in
 					let itemPath = directoryURL.appendingPathComponent(item).path
-					self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of item", metadata: [
+					logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of item", metadata: [
 						"item": .string(item)
 					])
-					guard let data = self.fileManager.contents(atPath: itemPath) else { return }
-					self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: generate sha1")
+					guard let data = fileManager.contents(atPath: itemPath) else { return }
+					logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: generate sha1")
 					manifest[item] = data.sha1().toHexString()
 				})
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: serialize manifest")
+				logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: serialize manifest")
 				let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
-				self.logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: try write manifest", metadata: [
+				logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: try write manifest", metadata: [
 					"manifestURL": .stringConvertible(manifestURL)
 				])
 				try manifestData.write(to: manifestURL)
 				promise.succeed(())
 			} catch {
-				self.logger.error("PassGenerator failed to generate manifest")
+				logger.error("PassGenerator failed to generate manifest")
 				promise.fail(error)
 			}
 		}
@@ -199,7 +199,7 @@ private extension PassGenerator {
 			logger: logger, { (_: ProcessOutput) in })
 			.flatMapThrowing { result in
 				guard result == 0 else {
-					self.logger.error("[ PassGenerator ] 👷‍♂️ generateSignature: failed to zip items with result \(result)")
+					logger.error("[ PassGenerator ] 👷‍♂️ generateSignature: failed to zip items with result \(result)")
 					throw PassGeneratorError.cannotZip(terminationStatus: result)
 				}
 		}
