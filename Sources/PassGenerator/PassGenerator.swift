@@ -43,6 +43,14 @@ public struct PassGenerator {
 	public func generatePass(_ pass: Pass, to destination: URL, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
 		logger.debug("[ PassGenerator ] 👷‍♂️ try prepare URLs")
 		let temporaryDirectoryURL = destination.appendingPathComponent(UUID().uuidString)
+		logger.debug("[ PassGenerator ] 👷‍♂️ generatePass: create temporary directory", metadata: [
+			"temporaryDirectory": .stringConvertible(temporaryDirectoryURL)
+		])
+		do {
+			try fileManager.createDirectory(at: temporaryDirectoryURL, withIntermediateDirectories: false, attributes: nil)
+		} catch {
+			return eventLoop.makeFailedFuture(error)
+		}
 		let passDirectoryURL = temporaryDirectoryURL.appendingPathComponent("pass")
 		let pkpassURL = temporaryDirectoryURL.appendingPathComponent("pass.pkpass")
 		let manifestURL = passDirectoryURL.appendingPathComponent("manifest.json")
@@ -59,7 +67,7 @@ public struct PassGenerator {
 			"pemCertURL": .stringConvertible(pemCertURL)
 		])
 		
-		let prepare = preparePass(pass, temporaryDirectory: temporaryDirectoryURL, passDirectory: passDirectoryURL, on: eventLoop)
+		let prepare = preparePass(pass, passDirectory: passDirectoryURL, on: eventLoop)
 		return prepare
 			.flatMap { generateManifest(for: passDirectoryURL, in: manifestURL, on: eventLoop) }
 			.flatMap { Self.generatePemKey(from: certificateURL, to: pemKeyURL, password: certificatePassword, on: eventLoop, logger: logger) }
@@ -72,20 +80,33 @@ public struct PassGenerator {
 }
 
 private extension PassGenerator {
-	func preparePass(_ pass: Pass, temporaryDirectory: URL, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+	func preparePass(_ pass: Pass, passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
 		logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: try prepare pass")
 		let promise = eventLoop.makePromise(of: Void.self)
 		DispatchQueue.global().async {
 			do {
-				logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: create directory", metadata: [
-					"temporaryDirectory": .stringConvertible(temporaryDirectory)
-				])
-				try fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false, attributes: nil)
 				logger.debug("[ PassGenerator ] 👷‍♂️ preparePass: copy item", metadata: [
 					"from templateURL": .stringConvertible(templateURL),
 					"to passDirectory": .stringConvertible(passDirectory)
 				])
-				try fileManager.copyItem(at: templateURL, to: passDirectory)
+				
+				try generateLocalizables(for: pass, in: passDirectory)
+				
+				let lprojFiles = try fileManager
+					.contentsOfDirectory(atPath: passDirectory.path)
+					.filter({ $0.contains("lproj") })
+				if lprojFiles.isEmpty {
+					try fileManager.copyItem(at: templateURL, to: passDirectory)
+				} else {
+					try lprojFiles.forEach { lprojFile in
+						try fileManager.contentsOfDirectory(atPath: templateURL.path).forEach { templateFile in
+							try fileManager.copyItem(
+								at: templateURL.appendingPathComponent(templateFile),
+								to: passDirectory.appendingPathComponent(lprojFile).appendingPathComponent(templateFile)
+							)
+						}
+					}
+				}
 				
 				let formatter = DateFormatter()
 				formatter.dateFormat = "yyyy-MM-dd'T'HH:mmZZZZZ"
@@ -113,6 +134,58 @@ private extension PassGenerator {
 		return promise.futureResult
 	}
 	
+	func generateLocalizables(for localizable: Localizable, in directory: URL) throws {
+		logger.debug("[ PassGenerator ] 👷‍♂️ generateLocalizables: try save localizables", metadata: [
+			"in directory": .stringConvertible(directory)
+		])
+		for (language, strings) in localizable.strings {
+			let lprojURL = directory
+				.appendingPathComponent(language.rawValue)
+				.appendingPathExtension("lproj")
+			logger.debug("[ PassGenerator ] 👷‍♂️ generateLocalizables: try create lproj directory", metadata: [
+				"for language": .stringConvertible(language.rawValue),
+				"to lprojURL": .stringConvertible(lprojURL)
+			])
+			try fileManager.createDirectory(at: lprojURL, withIntermediateDirectories: true, attributes: nil)
+			let stringsFileURL = lprojURL
+				.appendingPathComponent("pass")
+				.appendingPathExtension("strings")
+			logger.debug("[ PassGenerator ] 👷‍♂️ generateLocalizables: try save strings file", metadata: [
+				"for language": .stringConvertible(language.rawValue),
+				"to stringsFileURL": .stringConvertible(stringsFileURL)
+			])
+			try strings
+				.reduce("") { $0 + "\"\($1.key)\" = \"\($1.value)\";\n" }
+				.write(to: stringsFileURL, atomically: true, encoding: .utf8)
+		}
+	}
+	
+	func addContentsSHAs(to manifest: inout [String: String], for directory: URL) throws {
+		var isDir : ObjCBool = false
+		if fileManager.fileExists(atPath: directory.path, isDirectory:&isDir) {
+			if isDir.boolValue {
+				// file exists and is a directory
+				let contents = try fileManager.contentsOfDirectory(atPath: directory.path)
+				try contents.forEach({ (item) in
+					let itemPath = directory.appendingPathComponent(item)
+					try addContentsSHAs(to: &manifest, for: itemPath)
+				})
+			} else {
+				// file exists and is not a directory
+				logger.debug("[ PassGenerator ] 👷‍♂️ addContentsSHAs: get contents of item", metadata: [
+					"item": .string(directory.lastPathComponent)
+				])
+				guard let data = fileManager.contents(atPath: directory.path) else { return }
+				logger.debug("[ PassGenerator ] 👷‍♂️ addContentsSHAs: generate sha1")
+				var key = directory.lastPathComponent
+				if let containingFolder = directory.pathComponents.filter({ $0 != key }).last, containingFolder.contains("lproj") {
+					key = "\(containingFolder)/\(key)"
+				}
+				manifest[key] = data.sha1().toHexString()
+			}
+		}
+	}
+	
 	func generateManifest(for directoryURL: URL, in manifestURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
 		logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: try generate manifest")
 		let promise = eventLoop.makePromise(of: Void.self)
@@ -121,17 +194,8 @@ private extension PassGenerator {
 				logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of directory", metadata: [
 					"directoryURL": .stringConvertible(directoryURL)
 				])
-				let contents = try fileManager.contentsOfDirectory(atPath: directoryURL.path)
 				var manifest: [String: String] = [:]
-				contents.forEach({ (item) in
-					let itemPath = directoryURL.appendingPathComponent(item).path
-					logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: get contents of item", metadata: [
-						"item": .string(item)
-					])
-					guard let data = fileManager.contents(atPath: itemPath) else { return }
-					logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: generate sha1")
-					manifest[item] = data.sha1().toHexString()
-				})
+				try addContentsSHAs(to: &manifest, for: directoryURL)
 				logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: serialize manifest")
 				let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
 				logger.debug("[ PassGenerator ] 👷‍♂️ generateManifest: try write manifest", metadata: [

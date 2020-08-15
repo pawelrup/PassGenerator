@@ -1,22 +1,12 @@
 import Foundation
 
-public enum PassValue: Codable {
+public enum PassValue {
 	case double(Double)
 	case string(String)
-	
-	public init(from decoder: Decoder) throws {
-		let container = try decoder.singleValueContainer()
-		do {
-			self = try .double(container.decode(Double.self))
-		} catch DecodingError.typeMismatch {
-			do {
-				self = try .string(container.decode(String.self))
-			} catch DecodingError.typeMismatch {
-				throw DecodingError.typeMismatch(PassValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Encoded payload not of an expected type"))
-			}
-		}
-	}
-	
+	case localizedString([PassLanguage: String])
+}
+
+extension PassValue: Encodable {
 	public func encode(to encoder: Encoder) throws {
 		var container = encoder.singleValueContainer()
 		switch self {
@@ -24,6 +14,23 @@ public enum PassValue: Codable {
 			try container.encode(double)
 		case .string(let string):
 			try container.encode(string)
+		case .localizedString(let dict):
+			try container.encode("pass.field.\(dict.hashValue)")
 		}
+	}
+}
+
+// MARK: - Localizable
+extension PassValue: Localizable {
+	public var strings: [PassLanguage: [String: String]] {
+		guard case let .localizedString(dict) = self else { return [:] }
+		var strings = [PassLanguage: [String: String]]()
+		let keys: [PassLanguage] = Array(dict.keys)
+		for language in Set(keys) {
+			var values = [String: String]()
+			values["pass.field.\(dict.hashValue)"] = dict[language]
+			strings[language] = values
+		}
+		return strings
 	}
 }

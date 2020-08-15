@@ -8,7 +8,7 @@
 import Foundation
 
 public protocol StoreCard: PassConvertible {
-	var description: String { get }
+	var description: [PassLanguage: String] { get }
 	var organizationName: String { get }
 	var passTypeIdentifier: String { get }
 	var serialNumber: String { get }
@@ -56,6 +56,7 @@ extension StoreCard {
 			stripColor: stripColor,
 			authenticationToken: authenticationToken,
 			webServiceURL: webServiceURL,
-			semantics: semantics)
+			semantics: semantics
+		)
 	}
 }

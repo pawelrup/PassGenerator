@@ -8,7 +8,7 @@
 import Foundation
 
 public protocol BoardingPass: PassConvertible {
-	var description: String { get }
+	var description: [PassLanguage: String] { get }
 	var organizationName: String { get }
 	var passTypeIdentifier: String { get }
 	var serialNumber: String { get }

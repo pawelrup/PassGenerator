@@ -2,7 +2,7 @@ import Foundation
 
 /// The operating system uses the semantic tag data to offer a pass at the most appropriate time. For example, semantic tags added to a movie pass could take effect when the user arrives in the theater at the scheduled time by showing a Siri suggestion to enable Do Not Disturb mode for the duration of the film.
 /// In order for the system to send the suggestion to set Do Not Disturb, the eventType must be set to indicate that the pass is a movie ticket and the silenceRequested, eventStartDate, eventEndDate, and venueLocation tags must be added.
-public struct PassSemantics: Codable {
+public struct PassSemantics: Encodable {
 	
 	// MARK: - Semantics for All Passes
 	

@@ -1,14 +1,14 @@
 import Foundation
 
 /// See: https://developer.apple.com/library/archive/documentation/UserExperience/Reference/PassKit_Bundle/Chapters/TopLevel.html
-public struct Pass: Codable {
+public struct Pass {
 	
 	/// - Standard Keys
 	/// Information that is required for all passes.
 	
 	/// Brief description of the pass, used by the iOS accessibility technologies.
 	/// Don’t try to include all of the data on the pass in its description, just include enough detail to distinguish passes of the same type.
-	public var description: String
+	public var description: [PassLanguage: String]
 	
 	/// Version of the file format. The value must be 1.
 	public var formatVersion: Int
@@ -88,9 +88,6 @@ public struct Pass: Codable {
 	/// - The barcode key (for iOS 8 and earlier)
 	/// To support older versions of iOS, use both keys. The system automatically selects the barcodes array for iOS 9 and later and uses the barcode dictionary for iOS 8 and earlier.
 	
-	/// Information specific to the pass’s barcode. For this dictionary’s keys, see Barcode Dictionary Keys.
-	@available(*, deprecated, message: "Deprecated in iOS 9.0 and later; use barcodes instead.")
-	public var barcode: PassBarcode?
 	/// Information specific to the pass’s barcode. The system uses the first valid barcode dictionary in the array. Additional dictionaries can be added as fallbacks. For this dictionary’s keys, see Barcode Dictionary Keys.
 	/// Note: Available only in iOS 9.0 and later.
 	public var barcodes: [PassBarcode]?
@@ -106,7 +103,7 @@ public struct Pass: Codable {
 	/// If omitted, the label color is determined automatically.
 	public var labelColor: String?
 	/// Text displayed next to the logo on the pass.
-	public var logoText: String?
+	public var logoText: [PassLanguage: String]?
 	public var stripColor: String?
 	/// If true, the strip image is displayed without a shine effect. The default value prior to iOS 7.0 is false.
 	/// In iOS 7.0, a shine effect is never applied, and this key is deprecated.
@@ -137,7 +134,7 @@ public struct Pass: Codable {
 	/// Semantic tags can be added to all types of Wallet passes, but some tags are only applicable to specific types such as event tickets, boarding passes, and store cards. For a full list of all tags and their associated pass types.
 	public var semantics: PassSemantics?
 	
-	public init(description: String, formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, stripColor: String? = nil, logoText: String? = nil, suppressStripShine: Bool? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
+	public init(description: [PassLanguage: String], formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, stripColor: String? = nil, logoText: [PassLanguage: String]? = nil, suppressStripShine: Bool? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
 		self.description = description
 		self.formatVersion = formatVersion
 		self.organizationName = organizationName
@@ -170,5 +167,158 @@ public struct Pass: Codable {
 		self.webServiceURL = webServiceURL
 		self.nfc = nfc
 		self.semantics = semantics
+	}
+}
+
+// MARK: - Encodable
+extension Pass: Encodable {
+	enum CodingKeys: String, CodingKey {
+		case description
+		case formatVersion
+		case organizationName
+		case passTypeIdentifier
+		case serialNumber
+		case teamIdentifier
+		case appLaunchURL
+		case associatedStoreIdentifiers
+		case userInfo
+		case expirationDate
+		case voided
+		case beacons
+		case locations
+		case maxDistance
+		case relevantDate
+		case boardingPass
+		case coupon
+		case eventTicket
+		case generic
+		case storeCard
+		case barcodes
+		case backgroundColor
+		case foregroundColor
+		case groupingIdentifier
+		case labelColor
+		case logoText
+		case stripColor
+		case suppressStripShine
+		case authenticationToken
+		case webServiceURL
+		case nfc
+		case semantics
+	}
+	
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode("pass.description", forKey: .description)
+		try container.encode(formatVersion, forKey: .formatVersion)
+		try container.encode(organizationName, forKey: .organizationName)
+		try container.encode(passTypeIdentifier, forKey: .passTypeIdentifier)
+		try container.encode(serialNumber, forKey: .serialNumber)
+		try container.encode(teamIdentifier, forKey: .teamIdentifier)
+		if let appLaunchURL = appLaunchURL {
+			try container.encode(appLaunchURL, forKey: .appLaunchURL)
+		}
+		if let associatedStoreIdentifiers = associatedStoreIdentifiers {
+			try container.encode(associatedStoreIdentifiers, forKey: .associatedStoreIdentifiers)
+		}
+		if let userInfo = userInfo {
+			try container.encode(userInfo, forKey: .userInfo)
+		}
+		if let expirationDate = expirationDate {
+			try container.encode(expirationDate, forKey: .expirationDate)
+		}
+		if let voided = voided {
+			try container.encode(voided, forKey: .voided)
+		}
+		if let beacons = beacons {
+			try container.encode(beacons, forKey: .beacons)
+		}
+		if let locations = locations {
+			try container.encode(locations, forKey: .locations)
+		}
+		if let maxDistance = maxDistance {
+			try container.encode(maxDistance, forKey: .maxDistance)
+		}
+		if let relevantDate = relevantDate {
+			try container.encode(relevantDate, forKey: .relevantDate)
+		}
+		if let boardingPass = boardingPass {
+			try container.encode(boardingPass, forKey: .boardingPass)
+		}
+		if let coupon = coupon {
+			try container.encode(coupon, forKey: .coupon)
+		}
+		if let eventTicket = eventTicket {
+			try container.encode(eventTicket, forKey: .eventTicket)
+		}
+		if let generic = generic {
+			try container.encode(generic, forKey: .generic)
+		}
+		if let storeCard = storeCard {
+			try container.encode(storeCard, forKey: .storeCard)
+		}
+		if let backgroundColor = backgroundColor {
+			try container.encode(backgroundColor, forKey: .backgroundColor)
+		}
+		if let backgroundColor = backgroundColor {
+			try container.encode(foregroundColor, forKey: .foregroundColor)
+		}
+		if let groupingIdentifier = groupingIdentifier {
+			try container.encode(groupingIdentifier, forKey: .groupingIdentifier)
+		}
+		if let labelColor = labelColor {
+			try container.encode(labelColor, forKey: .labelColor)
+		}
+		if logoText != nil {
+			try container.encode("pass.logoText", forKey: .logoText)
+		}
+		if let stripColor = stripColor {
+			try container.encode(stripColor, forKey: .stripColor)
+		}
+		if let suppressStripShine = suppressStripShine {
+			try container.encode(suppressStripShine, forKey: .suppressStripShine)
+		}
+		if let authenticationToken = authenticationToken {
+			try container.encode(authenticationToken, forKey: .authenticationToken)
+		}
+		if let webServiceURL = webServiceURL {
+			try container.encode(webServiceURL, forKey: .webServiceURL)
+		}
+		if let nfc = nfc {
+			try container.encode(nfc, forKey: .nfc)
+		}
+		if let semantics = semantics {
+			try container.encode(semantics, forKey: .semantics)
+		}
+	}
+}
+
+// MARK: - Localizable
+extension Pass: Localizable {
+	public var strings: [PassLanguage: [String: String]] {
+		var strings = [PassLanguage: [String: String]]()
+		let keys: [PassLanguage] = [
+			Array(description.keys),
+			logoText.flatMap { Array($0.keys) } ?? []
+		]
+		.flatMap { $0 }
+		for language in Set(keys) {
+			var values = [String: String]()
+			values["pass.description"] = description[language]
+			values["pass.logoText"] = logoText?[language]
+			strings[language] = values
+		}
+		beacons?.forEach { beacon in
+			strings.merge(beacon.strings, uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		}
+		locations?.forEach { location in
+			strings.merge(location.strings, uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		}
+		strings.merge(boardingPass?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		strings.merge(coupon?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		strings.merge(eventTicket?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		strings.merge(generic?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		strings.merge(storeCard?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		return strings
 	}
 }
