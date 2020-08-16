@@ -82,6 +82,8 @@ extension PassField: Localizable {
 			values["pass.field.\(key)"] = label?[language]
 			strings[language] = values
 		}
+		strings.merge(attributedValue?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
+		strings.merge(value?.strings ?? [:], uniquingKeysWith: { $0.merging($1, uniquingKeysWith: { $1 }) })
 		return strings
 	}
 }
