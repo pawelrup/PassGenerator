@@ -257,10 +257,13 @@ extension Pass: Encodable {
 		if let storeCard = storeCard {
 			try container.encode(storeCard, forKey: .storeCard)
 		}
+		if let barcodes = barcodes {
+			try container.encode(barcodes, forKey: .barcodes)
+		}
 		if let backgroundColor = backgroundColor {
 			try container.encode(backgroundColor, forKey: .backgroundColor)
 		}
-		if let backgroundColor = backgroundColor {
+		if let foregroundColor = foregroundColor {
 			try container.encode(foregroundColor, forKey: .foregroundColor)
 		}
 		if let groupingIdentifier = groupingIdentifier {
