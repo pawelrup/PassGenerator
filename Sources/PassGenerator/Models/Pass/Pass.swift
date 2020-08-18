@@ -104,10 +104,8 @@ public struct Pass {
 	public var labelColor: String?
 	/// Text displayed next to the logo on the pass.
 	public var logoText: [PassLanguage: String]?
+	
 	public var stripColor: String?
-	/// If true, the strip image is displayed without a shine effect. The default value prior to iOS 7.0 is false.
-	/// In iOS 7.0, a shine effect is never applied, and this key is deprecated.
-	public var suppressStripShine: Bool?
 	
 	/// - Web Service Keys
 	/// Information used to update passes using the web service.
@@ -134,7 +132,7 @@ public struct Pass {
 	/// Semantic tags can be added to all types of Wallet passes, but some tags are only applicable to specific types such as event tickets, boarding passes, and store cards. For a full list of all tags and their associated pass types.
 	public var semantics: PassSemantics?
 	
-	public init(description: [PassLanguage: String], formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, stripColor: String? = nil, logoText: [PassLanguage: String]? = nil, suppressStripShine: Bool? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
+	public init(description: [PassLanguage: String], formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, stripColor: String? = nil, logoText: [PassLanguage: String]? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
 		self.description = description
 		self.formatVersion = formatVersion
 		self.organizationName = organizationName
@@ -162,7 +160,6 @@ public struct Pass {
 		self.labelColor = labelColor
 		self.stripColor = stripColor
 		self.logoText = logoText
-		self.suppressStripShine = suppressStripShine
 		self.authenticationToken = authenticationToken
 		self.webServiceURL = webServiceURL
 		self.nfc = nfc
@@ -200,7 +197,6 @@ extension Pass: Encodable {
 		case labelColor
 		case logoText
 		case stripColor
-		case suppressStripShine
 		case authenticationToken
 		case webServiceURL
 		case nfc
@@ -277,9 +273,6 @@ extension Pass: Encodable {
 		}
 		if let stripColor = stripColor {
 			try container.encode(stripColor, forKey: .stripColor)
-		}
-		if let suppressStripShine = suppressStripShine {
-			try container.encode(suppressStripShine, forKey: .suppressStripShine)
 		}
 		if let authenticationToken = authenticationToken {
 			try container.encode(authenticationToken, forKey: .authenticationToken)
