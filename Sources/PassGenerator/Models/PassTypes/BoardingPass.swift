@@ -63,6 +63,7 @@ extension BoardingPass {
 			locations: locations,
 			relevantDate: relevantDate,
 			boardingPass: passStructure,
+			barcode: passBarcode,
 			barcodes: [passBarcode],
 			backgroundColor: backgroundColor,
 			foregroundColor: foregroundColor,

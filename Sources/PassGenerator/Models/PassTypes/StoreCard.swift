@@ -49,6 +49,7 @@ extension StoreCard {
 			teamIdentifier: teamIdentifier,
 			locations: locations,
 			storeCard: passStructure,
+			barcode: passBarcode,
 			barcodes: [passBarcode],
 			backgroundColor: backgroundColor,
 			foregroundColor: foregroundColor,

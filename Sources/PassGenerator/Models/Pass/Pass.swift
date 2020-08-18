@@ -87,6 +87,8 @@ public struct Pass {
 	/// - The barcodes key (new and required for iOS 9 and later)
 	/// - The barcode key (for iOS 8 and earlier)
 	/// To support older versions of iOS, use both keys. The system automatically selects the barcodes array for iOS 9 and later and uses the barcode dictionary for iOS 8 and earlier.
+	/// Information specific to the pass’s barcode. For this dictionary’s keys, see Barcode Dictionary Keys.
+	public var barcode: PassBarcode?
 	
 	/// Information specific to the pass’s barcode. The system uses the first valid barcode dictionary in the array. Additional dictionaries can be added as fallbacks. For this dictionary’s keys, see Barcode Dictionary Keys.
 	/// Note: Available only in iOS 9.0 and later.
@@ -132,7 +134,7 @@ public struct Pass {
 	/// Semantic tags can be added to all types of Wallet passes, but some tags are only applicable to specific types such as event tickets, boarding passes, and store cards. For a full list of all tags and their associated pass types.
 	public var semantics: PassSemantics?
 	
-	public init(description: [PassLanguage: String], formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, stripColor: String? = nil, logoText: [PassLanguage: String]? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
+	public init(description: [PassLanguage: String], formatVersion: Int, organizationName: String, passTypeIdentifier: String, serialNumber: String, teamIdentifier: String, appLaunchURL: String? = nil, associatedStoreIdentifiers: [Double]? = nil, userInfo: [String: String]? = nil, expirationDate: Date? = nil, voided: Bool? = nil, beacons: [PassBeacon]? = nil, locations: [PassLocation]? = nil, maxDistance: Double? = nil, relevantDate: Date? = nil, boardingPass: PassStructure? = nil, coupon: PassStructure? = nil, eventTicket: PassStructure? = nil, generic: PassStructure? = nil, storeCard: PassStructure? = nil, barcode: PassBarcode? = nil, barcodes: [PassBarcode]? = nil, backgroundColor: String? = nil, foregroundColor: String? = nil, groupingIdentifier: String? = nil, labelColor: String? = nil, stripColor: String? = nil, logoText: [PassLanguage: String]? = nil, authenticationToken: String? = nil, webServiceURL: String? = nil, nfc: PassNFC? = nil, semantics: PassSemantics? = nil) {
 		self.description = description
 		self.formatVersion = formatVersion
 		self.organizationName = organizationName
@@ -154,6 +156,7 @@ public struct Pass {
 		self.generic = generic
 		self.storeCard = storeCard
 		self.barcodes = barcodes
+		self.barcode = barcode
 		self.backgroundColor = backgroundColor
 		self.foregroundColor = foregroundColor
 		self.groupingIdentifier = groupingIdentifier
@@ -190,6 +193,7 @@ extension Pass: Encodable {
 		case eventTicket
 		case generic
 		case storeCard
+		case barcode
 		case barcodes
 		case backgroundColor
 		case foregroundColor
@@ -255,6 +259,9 @@ extension Pass: Encodable {
 		}
 		if let barcodes = barcodes {
 			try container.encode(barcodes, forKey: .barcodes)
+		}
+		if let barcode = barcode {
+			try container.encode(barcode, forKey: .barcode)
 		}
 		if let backgroundColor = backgroundColor {
 			try container.encode(backgroundColor, forKey: .backgroundColor)
