@@ -4,8 +4,8 @@
 import PackageDescription
 
 let dependencies: [PackageDescription.Package.Dependency] = [
-    .package(url: "https://github.com/apple/swift-nio.git", .upToNextMinor(from: "2.21.0")),
-    .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.3.1")),
+    .package(url: "https://github.com/apple/swift-nio.git", .upToNextMinor(from: "2.24.0")),
+    .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.3.6")),
     .package(url: "https://github.com/apple/swift-log.git", .upToNextMinor(from: "1.4.0"))
 ]
 let targets: [Target] = [
