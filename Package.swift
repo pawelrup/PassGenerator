@@ -4,7 +4,7 @@
 import PackageDescription
 
 let dependencies: [PackageDescription.Package.Dependency] = [
-    .package(url: "https://github.com/apple/swift-nio.git", .upToNextMinor(from: "2.25.1")),
+    .package(url: "https://github.com/apple/swift-nio.git", .upToNextMinor(from: "2.26.0")),
     .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.3.8")),
     .package(url: "https://github.com/apple/swift-log.git", .upToNextMinor(from: "1.4.0"))
 ]
