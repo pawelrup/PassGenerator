@@ -45,7 +45,7 @@ final class PassGeneratorTests: XCTestCase {
         try fileManager.removeItem(at: temporaryDirectoryURL)
     }
     
-    func testGeneratePassSuccessfully() throws {
+    func testGeneratePassSuccessfullyUsingEventLoop() throws {
         let pass = Pass(description: [.en: "tests pass description"],
                         formatVersion: 1,
                         organizationName: "example",
@@ -57,6 +57,28 @@ final class PassGeneratorTests: XCTestCase {
             try? "test".write(to: url, atomically: true, encoding: .utf8)
         }
         let data = try sut.generatePass(pass, to: temporaryDirectoryURL, on: eventLoop).wait()
+        XCTAssertTrue(localizablesGenerator.callCount > 0, "Should call localizables generator at least once")
+        XCTAssertTrue(itemsCopier.callCount > 0, "Should call items copier at least once")
+        XCTAssertTrue(manifestGenerator.callCount > 0, "Should call manifest generator at least once")
+        XCTAssertTrue(pemGenerator.generatePemKeyCallCount > 0, "Should call pem key generator at least once")
+        XCTAssertTrue(pemGenerator.generatePemCertificateCallCount > 0, "Should call pem certificate generator at least once")
+        XCTAssertTrue(signatureGenerator.callCount > 0, "Should call signature generator at least once")
+        XCTAssertTrue(zipper.callCount > 0, "Should call zipper at least once")
+        let result = String(decoding: data, as: UTF8.self)
+        XCTAssertEqual(result, "test", "result should be equal to 'test'")
+    }
+    
+    func testGeneratePassSuccessfullyUsingAsyncAwait() async throws {
+        let pass = Pass(description: [.en: "tests pass description"],
+                        formatVersion: 1,
+                        organizationName: "example",
+                        passTypeIdentifier: "id",
+                        serialNumber: UUID().uuidString,
+                        teamIdentifier: "example")
+        zipper.zip = { url in
+            try? "test".write(to: url, atomically: true, encoding: .utf8)
+        }
+        let data = try await sut.generatePass(pass, to: temporaryDirectoryURL)
         XCTAssertTrue(localizablesGenerator.callCount > 0, "Should call localizables generator at least once")
         XCTAssertTrue(itemsCopier.callCount > 0, "Should call items copier at least once")
         XCTAssertTrue(manifestGenerator.callCount > 0, "Should call manifest generator at least once")

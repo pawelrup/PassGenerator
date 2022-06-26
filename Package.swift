@@ -21,7 +21,7 @@ let products: [Product] = [
 ]
 let package = Package(
 	name: "PassGenerator",
-	platforms: [.macOS(.v10_13)],
+	platforms: [.macOS(.v10_15)],
 	products: products,
 	dependencies: dependencies,
 	targets: targets,

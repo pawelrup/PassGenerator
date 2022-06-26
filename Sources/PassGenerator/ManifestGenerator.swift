@@ -1,10 +1,9 @@
 import Foundation
 import Logging
-import NIOCore
 import CryptoSwift
 
 protocol ManifestGeneratorType {
-    func generateManifest(for directoryURL: URL, in manifestURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void>
+    func generateManifest(for directoryURL: URL, in manifestURL: URL) async throws
 }
 
 struct ManifestGenerator: ManifestGeneratorType {
@@ -16,29 +15,18 @@ struct ManifestGenerator: ManifestGeneratorType {
         self.fileManager = fileManager
     }
     
-    func generateManifest(for directoryURL: URL, in manifestURL: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        logger.debug("try generate manifest")
-        let promise = eventLoop.makePromise(of: Void.self)
-        DispatchQueue.global().async {
-            do {
-                logger.debug("get contents of directory", metadata: [
-                    "directoryURL": .stringConvertible(directoryURL)
-                ])
-                var manifest: [String: String] = [:]
-                try addContentsSHAs(to: &manifest, for: directoryURL)
-                logger.debug("serialize manifest")
-                let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
-                logger.debug("try write manifest", metadata: [
-                    "manifestURL": .stringConvertible(manifestURL)
-                ])
-                try manifestData.write(to: manifestURL)
-                promise.succeed(())
-            } catch {
-                logger.error("PassGenerator failed to generate manifest")
-                promise.fail(error)
-            }
-        }
-        return promise.futureResult
+    func generateManifest(for directoryURL: URL, in manifestURL: URL) async throws {
+        logger.debug("get contents of directory", metadata: [
+            "directoryURL": .stringConvertible(directoryURL)
+        ])
+        var manifest: [String: String] = [:]
+        try addContentsSHAs(to: &manifest, for: directoryURL)
+        logger.debug("serialize manifest")
+        let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
+        logger.debug("try write manifest", metadata: [
+            "manifestURL": .stringConvertible(manifestURL)
+        ])
+        try manifestData.write(to: manifestURL)
     }
     
     private func addContentsSHAs(to manifest: inout [String: String], for directory: URL) throws {

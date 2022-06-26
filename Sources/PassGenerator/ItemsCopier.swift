@@ -1,9 +1,8 @@
 import Foundation
 import Logging
-import NIOCore
 
 protocol ItemsCopierType {
-    func copyItems(from templateDirectory: URL, to passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void>
+    func copyItems(from templateDirectory: URL, to passDirectory: URL) async throws
 }
 
 struct ItemsCopier: ItemsCopierType {
@@ -15,31 +14,25 @@ struct ItemsCopier: ItemsCopierType {
         self.fileManager = fileManager
     }
     
-    func copyItems(from templateDirectory: URL, to passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
-        DispatchQueue.global().async {
-            do {
-                let lprojFiles = try fileManager
-                    .contentsOfDirectory(atPath: passDirectory.path)
-                    .filter { $0.contains("lproj") }
-                if lprojFiles.isEmpty {
-                    try fileManager.copyItem(at: templateDirectory, to: passDirectory)
-                } else {
-                    try lprojFiles.forEach { lprojFile in
-                        try fileManager.contentsOfDirectory(atPath: templateDirectory.path).forEach { templateFile in
-                            try fileManager.copyItem(
-                                at: templateDirectory.appendingPathComponent(templateFile),
-                                to: passDirectory.appendingPathComponent(lprojFile).appendingPathComponent(templateFile)
-                            )
-                        }
-                    }
+    func copyItems(from templateDirectory: URL, to passDirectory: URL) async throws {
+        logger.debug("try copy items", metadata: [
+            "from": .stringConvertible(templateDirectory),
+            "to": .stringConvertible(passDirectory)
+        ])
+        let lprojFiles = try fileManager
+            .contentsOfDirectory(atPath: passDirectory.path)
+            .filter { $0.contains("lproj") }
+        if lprojFiles.isEmpty {
+            try fileManager.copyItem(at: templateDirectory, to: passDirectory)
+        } else {
+            try lprojFiles.forEach { lprojFile in
+                try fileManager.contentsOfDirectory(atPath: templateDirectory.path).forEach { templateFile in
+                    try fileManager.copyItem(
+                        at: templateDirectory.appendingPathComponent(templateFile),
+                        to: passDirectory.appendingPathComponent(lprojFile).appendingPathComponent(templateFile)
+                    )
                 }
-                promise.succeed(())
-            } catch {
-                logger.error("failed to prepare pass")
-                promise.fail(error)
             }
         }
-        return promise.futureResult
     }
 }

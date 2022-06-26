@@ -29,13 +29,12 @@ final class ManifestGeneratorTests: XCTestCase {
         try fileManager.removeItem(at: temporaryDirectoryURL)
     }
     
-    func testSaveManifestSuccessfullyForNotEpmtyDirectory() throws {
+    func testSaveManifestSuccessfullyForNotEpmtyDirectory() async throws {
         logger.info(#function)
         try fileManager.createDirectory(at: passURL, withIntermediateDirectories: true)
         let testFileURL = passURL.appendingPathComponent("test")
         try Data("test".utf8).write(to: testFileURL)
-        let eventLoop: EventLoop = EmbeddedEventLoop()
-        try sut.generateManifest(for: passURL, in: manifestURL, on: eventLoop).wait()
+        try await sut.generateManifest(for: passURL, in: manifestURL)
         let manifestExists = fileManager.fileExists(atPath: manifestURL.path)
         XCTAssertTrue(manifestExists, "manifest.json file should be created")
         let manifest = try Data(contentsOf: manifestURL)
@@ -44,11 +43,10 @@ final class ManifestGeneratorTests: XCTestCase {
                        "manifest.json should contain test sha")
     }
     
-    func testSaveEmptyManifestSuccessfullyForEpmtyDirectory() throws {
+    func testSaveEmptyManifestSuccessfullyForEpmtyDirectory() async throws {
         logger.info(#function)
         try fileManager.createDirectory(at: passURL, withIntermediateDirectories: true)
-        let eventLoop: EventLoop = EmbeddedEventLoop()
-        try sut.generateManifest(for: passURL, in: manifestURL, on: eventLoop).wait()
+        try await sut.generateManifest(for: passURL, in: manifestURL)
         let manifestExists = fileManager.fileExists(atPath: manifestURL.path)
         XCTAssertTrue(manifestExists, "manifest.json file should be created")
         let manifest = try Data(contentsOf: manifestURL)
@@ -56,13 +54,12 @@ final class ManifestGeneratorTests: XCTestCase {
         XCTAssertTrue(result.keys.isEmpty, "manifest.json should be empty")
     }
     
-    func testSaveManifestFailedForNotExistingDirectory() throws {
+    func testSaveManifestFailedForNotExistingDirectory() async throws {
         logger.info(#function)
-        let eventLoop: EventLoop = EmbeddedEventLoop()
-        XCTAssertThrowsError(
-            try sut.generateManifest(for: passURL, in: manifestURL, on: eventLoop).wait(),
-            "Generating manifest should throw an error"
-        )
+        do {
+            try await sut.generateManifest(for: passURL, in: manifestURL)
+            XCTFail("Expected to throw while awaiting, but succeeded")
+        } catch { }
         let manifestExists = fileManager.fileExists(atPath: manifestURL.path)
         XCTAssertFalse(manifestExists, "manifest.json file should not be created")
     }
