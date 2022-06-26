@@ -23,10 +23,11 @@ public struct PassGeneratorConfiguration {
     let wwdrURL: URL
     let templateURL: URL
 }
+
 public protocol PassGeneratorType {
     init(configuration: PassGeneratorConfiguration, logger: Logger)
-    func generatePass(_ pass: Pass, to destination: URL, on eventLoop: EventLoop) -> EventLoopFuture<Data>
-    func generatePass(_ pass: Pass, to destination: URL) async throws -> Data
+    func generatePass(_ pass: Pass, on eventLoop: EventLoop) -> EventLoopFuture<Data>
+    func generatePass(_ pass: Pass) async throws -> Data
 }
 
 public struct PassGenerator: PassGeneratorType {
@@ -72,17 +73,25 @@ public struct PassGenerator: PassGeneratorType {
     ///     - pass: A Pass object containing all pass information, ensure the `passTypeIdentifier` and `teamIdentifier` match those in supplied certificate.
     ///     - destination: The destination of the .pkpass to be saved, if nil the pass will be saved to the execution directory (generally the case if the result Data is used).
     /// - returns: A future containing the data of the generated pass.
-    public func generatePass(_ pass: Pass, to destination: URL) async throws -> Data {
+    public func generatePass(_ pass: Pass) async throws -> Data {
         logger.debug("try prepare URLs")
-        let temporaryDirectoryURL = destination.appendingPathComponent(UUID().uuidString)
-        let passDirectoryURL = temporaryDirectoryURL.appendingPathComponent("pass")
-        let pkpassURL = temporaryDirectoryURL.appendingPathComponent("pass.pkpass")
+        let cachesDirectory = try fileManager.url(for: .cachesDirectory,
+                                                  in: .userDomainMask,
+                                                  appropriateFor: nil,
+                                                  create: true)
+        let temporaryDirectory = cachesDirectory.appendingPathComponent(UUID().uuidString)
+        defer {
+            try? fileManager.removeItem(at: temporaryDirectory)
+        }
+        try fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true, attributes: nil)
+        let pkpassURL = temporaryDirectory.appendingPathComponent("pass.pkpass")
+        let pemKeyURL = temporaryDirectory.appendingPathComponent("key.pem")
+        let pemCertURL = temporaryDirectory.appendingPathComponent("cert.pem")
+        let passDirectoryURL = temporaryDirectory.appendingPathComponent("pass")
         let manifestURL = passDirectoryURL.appendingPathComponent("manifest.json")
         let signatureURL = passDirectoryURL.appendingPathComponent("signature")
-        let pemKeyURL = temporaryDirectoryURL.appendingPathComponent("key.pem")
-        let pemCertURL = temporaryDirectoryURL.appendingPathComponent("cert.pem")
         logger.debug("URLs prepared", metadata: [
-            "temporaryDirectoryURL": .stringConvertible(temporaryDirectoryURL),
+            "temporaryDirectoryURL": .stringConvertible(temporaryDirectory),
             "passDirectoryURL": .stringConvertible(passDirectoryURL),
             "pkpassURL": .stringConvertible(pkpassURL),
             "manifestURL": .stringConvertible(manifestURL),
@@ -101,7 +110,6 @@ public struct PassGenerator: PassGeneratorType {
         try await signatureGenerator.generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: configuration.wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: configuration.certificatePassword)
         try await zipper.zipItems(in: passDirectoryURL, to: pkpassURL)
         let data = try Data(contentsOf: pkpassURL)
-        try fileManager.removeItem(at: temporaryDirectoryURL)
         return data
     }
 	
@@ -111,18 +119,18 @@ public struct PassGenerator: PassGeneratorType {
 	///     - destination: The destination of the .pkpass to be saved, if nil the pass will be saved to the execution directory (generally the case if the result Data is used).
 	///     - eventLoop: Event loop to perform async task on.
 	/// - returns: A future containing the data of the generated pass.
-	public func generatePass(_ pass: Pass, to destination: URL, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
-            let promise = eventLoop.makePromise(of: Data.self)
-            Task {
-                do {
-                    let data = try await generatePass(pass, to: destination)
-                    promise.succeed(data)
-                } catch {
-                    logger.error("failed to generate pkpass")
-                    promise.fail(error)
-                }
+	public func generatePass(_ pass: Pass, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
+        let promise = eventLoop.makePromise(of: Data.self)
+        Task {
+            do {
+                let data = try await generatePass(pass)
+                promise.succeed(data)
+            } catch {
+                logger.error("failed to generate pkpass")
+                promise.fail(error)
             }
-            return promise.futureResult
+        }
+        return promise.futureResult
 	}
 }
 

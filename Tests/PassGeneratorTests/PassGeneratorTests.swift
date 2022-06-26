@@ -5,15 +5,13 @@ import NIOEmbedded
 @testable import PassGenerator
 
 final class PassGeneratorTests: XCTestCase {
-    lazy var temporaryDirectoryURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(UUID().uuidString)
-
     let fileManager: FileManager = .default
     var logger = Logger(label: "PassGeneratorTests", factory: TestsLogHandler.standardOutput)
     lazy var config = PassGeneratorConfiguration(
-        certificateURL: temporaryDirectoryURL,
+        certificateURL: fileManager.homeDirectoryForCurrentUser,
         certificatePassword: "",
-        wwdrURL: temporaryDirectoryURL,
-        templateURL: temporaryDirectoryURL
+        wwdrURL: fileManager.homeDirectoryForCurrentUser,
+        templateURL: fileManager.homeDirectoryForCurrentUser
     )
     let localizablesGenerator = LocalizablesGeneratorMock()
     let itemsCopier = ItemsCopierMock()
@@ -32,17 +30,10 @@ final class PassGeneratorTests: XCTestCase {
         logger: logger,
         fileManager: .default)
     
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() {
+        super.setUp()
         
         logger.logLevel = .debug
-        try fileManager.createDirectory(at: temporaryDirectoryURL, withIntermediateDirectories: true)
-    }
-    
-    override func tearDownWithError() throws {
-        try super.tearDownWithError()
-        
-        try fileManager.removeItem(at: temporaryDirectoryURL)
     }
     
     func testGeneratePassSuccessfullyUsingEventLoop() throws {
@@ -56,7 +47,7 @@ final class PassGeneratorTests: XCTestCase {
         zipper.zip = { url in
             try? "test".write(to: url, atomically: true, encoding: .utf8)
         }
-        let data = try sut.generatePass(pass, to: temporaryDirectoryURL, on: eventLoop).wait()
+        let data = try sut.generatePass(pass, on: eventLoop).wait()
         XCTAssertTrue(localizablesGenerator.callCount > 0, "Should call localizables generator at least once")
         XCTAssertTrue(itemsCopier.callCount > 0, "Should call items copier at least once")
         XCTAssertTrue(manifestGenerator.callCount > 0, "Should call manifest generator at least once")
@@ -78,7 +69,7 @@ final class PassGeneratorTests: XCTestCase {
         zipper.zip = { url in
             try? "test".write(to: url, atomically: true, encoding: .utf8)
         }
-        let data = try await sut.generatePass(pass, to: temporaryDirectoryURL)
+        let data = try await sut.generatePass(pass)
         XCTAssertTrue(localizablesGenerator.callCount > 0, "Should call localizables generator at least once")
         XCTAssertTrue(itemsCopier.callCount > 0, "Should call items copier at least once")
         XCTAssertTrue(manifestGenerator.callCount > 0, "Should call manifest generator at least once")
