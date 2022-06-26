@@ -134,7 +134,8 @@ extension Process {
 			let promise = eventLoop.makePromise(of: Int32.self)
 			DispatchQueue.global().async {
 				do {
-					let process = try launchProcess(at: program, in: currentDirectoryURL, arguments, stdout: stdout, stderr: stderr)
+					let process = makeProcess(at: program, in: currentDirectoryURL, arguments, stdout: stdout, stderr: stderr)
+                    try process.run()
 					process.waitUntilExit()
 					running = false
 					promise.completeWith(.success(process.terminationStatus))
@@ -163,7 +164,7 @@ extension Process {
 	}
 	
 	/// Powers `Process.execute(_:_:)` methods. Separated so that `/bin/sh -c which` can run as a separate command.
-	private static func launchProcess(at executableURL: URL, in currentDirectoryURL: URL?, _ arguments: [String], stdout: Pipe, stderr: Pipe) throws -> Process {
+	private static func makeProcess(at executableURL: URL, in currentDirectoryURL: URL?, _ arguments: [String], stdout: Pipe, stderr: Pipe) -> Process {
 		let process = Process()
 		process.environment = ProcessInfo.processInfo.environment
 		process.executableURL = executableURL
@@ -171,7 +172,6 @@ extension Process {
 		process.arguments = arguments
 		process.standardOutput = stdout
 		process.standardError = stderr
-		try process.run()
 		return process
 	}
 }
