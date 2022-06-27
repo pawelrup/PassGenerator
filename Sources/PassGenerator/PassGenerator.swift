@@ -1,5 +1,5 @@
 import Foundation
-import NIO
+import NIOCore
 import Logging
 import CryptoSwift
 
@@ -18,13 +18,24 @@ public enum PassGeneratorError: Error {
 ///     - wwdrURL: URL to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
 ///     - templateURL: URL of the template to be used for the pass, containing the images etc.
 public struct PassGeneratorConfiguration {
-    struct Certificate {
+    public struct Certificate {
         let url: URL
         let password: String
+        
+        public init(url: URL, password: String) {
+            self.url = url
+            self.password = password
+        }
     }
     let certificate: Certificate
     let wwdrURL: URL
     let templateURL: URL
+    
+    public init(certificate: Certificate, wwdrURL: URL, templateURL: URL) {
+        self.certificate = certificate
+        self.wwdrURL = wwdrURL
+        self.templateURL = templateURL
+    }
 }
 
 public protocol PassGeneratorType {
