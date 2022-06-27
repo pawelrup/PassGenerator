@@ -5,13 +5,11 @@ import NIOEmbedded
 @testable import PassGenerator
 
 final class PassGeneratorTests: XCTestCase {
-    let fileManager: FileManager = .default
     var logger = Logger(label: "PassGeneratorTests", factory: TestsLogHandler.standardOutput)
     lazy var config = PassGeneratorConfiguration(
-        certificateURL: fileManager.homeDirectoryForCurrentUser,
-        certificatePassword: "",
-        wwdrURL: fileManager.homeDirectoryForCurrentUser,
-        templateURL: fileManager.homeDirectoryForCurrentUser
+        certificate: .init(url: URL(fileURLWithPath: ""), password: ""),
+        wwdrURL: URL(fileURLWithPath: ""),
+        templateURL: URL(fileURLWithPath: "")
     )
     let localizablesGenerator = LocalizablesGeneratorMock()
     let itemsCopier = ItemsCopierMock()

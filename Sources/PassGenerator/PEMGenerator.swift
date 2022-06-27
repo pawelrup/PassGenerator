@@ -2,8 +2,8 @@ import Foundation
 import Logging
 
 protocol PEMGeneratorType {
-    func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String) async throws
-    func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String) async throws
+    func generatePemKey(from certificateURL: URL, with password: String, to pemKeyURL: URL) async throws
+    func generatePemCertificate(from certificateURL: URL, with password: String, to pemCertURL: URL) async throws
 }
 
 struct PEMGenerator: PEMGeneratorType {
@@ -18,7 +18,7 @@ struct PEMGenerator: PEMGeneratorType {
     ///     - certificateURL: Pass .p12 certificate url.
     ///     - pemKeyURL: Destination url of .pem key file
     ///     - password: Passowrd of certificate.
-    func generatePemKey(from certificateURL: URL, to pemKeyURL: URL, password: String) async throws {
+    func generatePemKey(from certificateURL: URL, with password: String, to pemKeyURL: URL) async throws {
         logger.debug("try generate pem key", metadata: [
             "certificateURL": .stringConvertible(certificateURL),
             "pemKeyURL": .stringConvertible(pemKeyURL)
@@ -48,7 +48,7 @@ struct PEMGenerator: PEMGeneratorType {
     ///     - certificateURL: Pass .p12 certificate url.
     ///     - pemKeyURL: Destination url of .pem certificate file
     ///     - password: Passowrd of certificate.
-    func generatePemCertificate(from certificateURL: URL, to pemCertURL: URL, password: String) async throws {
+    func generatePemCertificate(from certificateURL: URL, with password: String, to pemCertURL: URL) async throws {
         logger.debug("try generate pem certificate", metadata: [
             "certificateURL": .stringConvertible(certificateURL),
             "pemCertURL": .stringConvertible(pemCertURL)

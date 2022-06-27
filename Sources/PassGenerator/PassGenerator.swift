@@ -18,8 +18,11 @@ public enum PassGeneratorError: Error {
 ///     - wwdrURL: URL to the WWDR certificate https://developer.apple.com/certificationauthority/AppleWWDRCA.cer.
 ///     - templateURL: URL of the template to be used for the pass, containing the images etc.
 public struct PassGeneratorConfiguration {
-    let certificateURL: URL
-    let certificatePassword: String
+    struct Certificate {
+        let url: URL
+        let password: String
+    }
+    let certificate: Certificate
     let wwdrURL: URL
     let templateURL: URL
 }
@@ -99,15 +102,21 @@ public struct PassGenerator: PassGeneratorType {
             "pemKeyURL": .stringConvertible(pemKeyURL),
             "pemCertURL": .stringConvertible(pemCertURL)
         ])
-        
+        let certificate = configuration.certificate
         try fileManager.createDirectory(at: passDirectoryURL, withIntermediateDirectories: true, attributes: nil)
         try localizablesGenerator.generateLocalizables(for: pass, in: passDirectoryURL)
         try await itemsCopier.copyItems(from: configuration.templateURL, to: passDirectoryURL)
-        try await savePassJSON(pass, to: passDirectoryURL)
+        try await generatePassJSON(from: pass, to: passDirectoryURL)
         try await manifestGenerator.generateManifest(for: passDirectoryURL, in: manifestURL)
-        try await pemGenerator.generatePemKey(from: configuration.certificateURL, to: pemKeyURL, password: configuration.certificatePassword)
-        try await pemGenerator.generatePemCertificate(from: configuration.certificateURL, to: pemCertURL, password: configuration.certificatePassword)
-        try await signatureGenerator.generateSignature(pemCertURL: pemCertURL, pemKeyURL: pemKeyURL, wwdrURL: configuration.wwdrURL, manifestURL: manifestURL, signatureURL: signatureURL, certificatePassword: configuration.certificatePassword)
+        try await pemGenerator.generatePemKey(from: certificate.url, with: certificate.password, to: pemKeyURL)
+        try await pemGenerator.generatePemCertificate(from: certificate.url, with: certificate.password, to: pemCertURL)
+        try await signatureGenerator.generateSignature(
+            pemCertURL: pemCertURL,
+            pemKeyURL: pemKeyURL,
+            wwdrURL: configuration.wwdrURL,
+            manifestURL: manifestURL,
+            signatureURL: signatureURL,
+            certificatePassword: certificate.password)
         try await zipper.zipItems(in: passDirectoryURL, to: pkpassURL)
         let data = try Data(contentsOf: pkpassURL)
         return data
@@ -135,7 +144,7 @@ public struct PassGenerator: PassGeneratorType {
 }
 
 private extension PassGenerator {
-    func savePassJSON(_ pass: Pass, to passDirectory: URL) async throws {
+    func generatePassJSON(from pass: Pass, to passDirectory: URL) async throws {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mmZZZZZ"
         let jsonEncoder = JSONEncoder()
@@ -159,7 +168,7 @@ private extension PassGenerator {
         let promise = eventLoop.makePromise(of: Void.self)
         Task {
             do {
-                try await savePassJSON(pass, to: passDirectory)
+                try await generatePassJSON(from: pass, to: passDirectory)
                 promise.succeed(())
             } catch {
                 logger.error("failed to save pass.json")
