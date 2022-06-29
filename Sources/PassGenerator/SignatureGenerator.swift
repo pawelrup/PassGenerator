@@ -20,30 +20,29 @@ struct SignatureGenerator: SignatureGeneratorType {
             "manifestURL": .stringConvertible(manifestURL),
             "signatureURL": .stringConvertible(signatureURL)
         ])
-        let result = try Process.execute(URL(fileURLWithPath: "/usr/bin/openssl"),
-                                         "smime",
-                                         "-sign",
-                                         "-signer",
-                                         pemCertURL.path,
-                                         "-inkey",
-                                         pemKeyURL.path,
-                                         "-certfile",
-                                         wwdrURL.path,
-                                         "-in",
-                                         manifestURL.path,
-                                         "-out",
-                                         signatureURL.path,
-                                         "-outform",
-                                         "der",
-                                         "-binary",
-                                         "-passin",
-                                         "pass:" + certificatePassword,
-                                         logger: logger)
-        guard result == "0" else {
+        let result = try await Process.asyncExecute(URL(fileURLWithPath: "/usr/bin/openssl"),
+                                                    "smime",
+                                                    "-sign",
+                                                    "-signer",
+                                                    pemCertURL.path,
+                                                    "-inkey",
+                                                    pemKeyURL.path,
+                                                    "-certfile",
+                                                    wwdrURL.path,
+                                                    "-in",
+                                                    manifestURL.path,
+                                                    "-out",
+                                                    signatureURL.path,
+                                                    "-outform",
+                                                    "der",
+                                                    "-binary",
+                                                    "-passin",
+                                                    "pass:" + certificatePassword)
+        guard result == 0 else {
             logger.error("failed to generate signature", metadata: [
                 "result": .stringConvertible(result)
             ])
-            throw PassGeneratorError.cannotZip(terminationStatus: Int32(result)!)
+            throw PassGeneratorError.cannotZip(terminationStatus: result)
         }
     }
 }

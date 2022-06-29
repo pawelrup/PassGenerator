@@ -23,23 +23,22 @@ struct PEMGenerator: PEMGeneratorType {
             "certificateURL": .stringConvertible(certificateURL),
             "pemKeyURL": .stringConvertible(pemKeyURL)
         ])
-        let result = try Process.execute(URL(fileURLWithPath: "/usr/bin/openssl"),
-                                         "pkcs12",
-                                         "-in",
-                                         certificateURL.path,
-                                         "-nocerts",
-                                         "-out",
-                                         pemKeyURL.path,
-                                         "-passin",
-                                         "pass:" + password,
-                                         "-passout",
-                                         "pass:" + password,
-                                         logger: logger)
-        guard result == "0" else {
+        let result = try await Process.asyncExecute(URL(fileURLWithPath: "/usr/bin/openssl"),
+                                              "pkcs12",
+                                              "-in",
+                                              certificateURL.path,
+                                              "-nocerts",
+                                              "-out",
+                                              pemKeyURL.path,
+                                              "-passin",
+                                              "pass:" + password,
+                                              "-passout",
+                                              "pass:" + password)
+        guard result == 0 else {
             logger.error("failed to generate pem key", metadata: [
                 "result": .stringConvertible(result)
             ])
-            throw PassGeneratorError.cannotZip(terminationStatus: Int32(result)!)
+            throw PassGeneratorError.cannotZip(terminationStatus: result)
         }
     }
     
@@ -53,22 +52,21 @@ struct PEMGenerator: PEMGeneratorType {
             "certificateURL": .stringConvertible(certificateURL),
             "pemCertURL": .stringConvertible(pemCertURL)
         ])
-        let result = try Process.execute(URL(fileURLWithPath: "/usr/bin/openssl"),
-                                         "pkcs12",
-                                         "-in",
-                                         certificateURL.path,
-                                         "-clcerts",
-                                         "-nokeys",
-                                         "-out",
-                                         pemCertURL.path,
-                                         "-passin",
-                                         "pass:" + password,
-                                         logger: logger)
-        guard result == "0" else {
+        let result = try await Process.asyncExecute(URL(fileURLWithPath: "/usr/bin/openssl"),
+                                              "pkcs12",
+                                              "-in",
+                                              certificateURL.path,
+                                              "-clcerts",
+                                              "-nokeys",
+                                              "-out",
+                                              pemCertURL.path,
+                                              "-passin",
+                                              "pass:" + password)
+        guard result == 0 else {
             logger.error("failed to generate pem certificate", metadata: [
                 "result": .stringConvertible(result)
             ])
-            throw PassGeneratorError.cannotZip(terminationStatus: Int32(result)!)
+            throw PassGeneratorError.cannotZip(terminationStatus: result)
         }
     }
 }

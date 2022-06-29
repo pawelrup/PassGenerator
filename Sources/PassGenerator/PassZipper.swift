@@ -17,18 +17,13 @@ struct PassZipper: PassZipperType {
             "directoryURL": .stringConvertible(directoryURL),
             "zipURL": .stringConvertible(zipURL)
         ])
-        let result = try Process.execute(URL(fileURLWithPath: "/usr/bin/zip"),
-                                         in: directoryURL,
-                                         zipURL.unixPath,
-                                         "-r",
-                                         "-q",
-                                         ".",
-                                         logger: logger)
-        guard result == "0" else {
+        let result = try await Process.asyncExecute(URL(fileURLWithPath: "/usr/bin/zip"),
+                                                    in: directoryURL, zipURL.unixPath, "-r", "-q", ".")
+        guard result == 0 else {
             logger.error("failed to zip items", metadata: [
                 "result": .stringConvertible(result)
             ])
-            throw PassGeneratorError.cannotZip(terminationStatus: Int32(result)!)
+            throw PassGeneratorError.cannotZip(terminationStatus: result)
         }
     }
 }
