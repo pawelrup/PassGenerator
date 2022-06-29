@@ -25,7 +25,7 @@ extension Process {
 	///                path will be resolved using `/bin/sh -c which ...`.
 	///     - arguments: An array of arguments to pass to the program.
 	public static func execute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String..., logger: Logger? = nil) throws -> String {
-		return try execute(program, in: currentDirectoryURL, arguments, logger: logger)
+		try execute(program, in: currentDirectoryURL, arguments, logger: logger)
 	}
 	
 	/// Executes the supplied program in a new process, blocking until the process completes.
@@ -73,7 +73,7 @@ extension Process {
 	///     - output: Handler for the process output.
 	/// - returns: A future containing the termination status of the process.
 	public static func asyncExecute(_ program: URL, in currentDirectoryURL: URL? = nil, _ arguments: String..., on eventLoop: EventLoop, logger: Logger? = nil, _ output: @escaping (ProcessOutput) -> ()) -> EventLoopFuture<Int32> {
-		return asyncExecute(program, in: currentDirectoryURL, arguments, on: eventLoop, logger: logger, output)
+		asyncExecute(program, in: currentDirectoryURL, arguments, on: eventLoop, logger: logger, output)
 	}
 	
 	/// Asynchronously the supplied program in a new process. Stderr and stdout will be supplied to the output closure

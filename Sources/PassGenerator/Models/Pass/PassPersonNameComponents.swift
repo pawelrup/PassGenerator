@@ -18,7 +18,7 @@ public struct PassPersonNameComponents: Codable {
 	public let nameSuffix: String?
 	public let nickname: String?
 	public var phoneticRepresentation: PassPersonNameComponents? {
-		get { return _phoneticRepresentation.value }
+		get { _phoneticRepresentation.value }
 		set { _phoneticRepresentation.value = newValue }
 	}
 	

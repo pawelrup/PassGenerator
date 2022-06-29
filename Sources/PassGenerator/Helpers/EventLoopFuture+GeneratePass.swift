@@ -12,7 +12,7 @@ import Logging
 public extension EventLoopFuture where Value: PassConvertible {
 	
     func generatePass(configuration: PassGeneratorConfiguration, logger: Logger) -> EventLoopFuture<Data> {
-		return flatMap { [unowned self] value in
+		flatMap { [unowned self] value in
             let generator = PassGenerator(configuration: configuration, logger: logger)
 			return generator.generatePass(value.pass, on: self.eventLoop)
 		}

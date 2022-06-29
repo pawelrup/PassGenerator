@@ -108,7 +108,7 @@ public struct TestsLogHandler: LogHandler {
 
     public subscript(metadataKey metadataKey: String) -> Logger.Metadata.Value? {
         get {
-            return self.metadata[metadataKey]
+            self.metadata[metadataKey]
         }
         set {
             self.metadata[metadataKey] = newValue
@@ -174,7 +174,7 @@ public struct TestsLogHandler: LogHandler {
     }
 
     private func prettify(_ metadata: Logger.Metadata) -> String? {
-        return !metadata.isEmpty
+        !metadata.isEmpty
             ? metadata.lazy.sorted(by: { $0.key < $1.key }).map { "\t\($0)=\($1)" }.joined(separator: "\n")
             : nil
     }

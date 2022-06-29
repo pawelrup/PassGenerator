@@ -22,7 +22,7 @@ struct Indirect<T> {
 	
 	var value: T {
 		get {
-			return wrapper.value
+			wrapper.value
 		}
 		set {
 			// Upon mutation of value, if the wrapper class instance is unique,
