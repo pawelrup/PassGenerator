@@ -49,13 +49,13 @@ public struct PassGenerator: PassGeneratorType {
     private let manifestGenerator: ManifestGeneratorType
     private let pemGenerator: PEMGeneratorType
     private let signatureGenerator: SignatureGeneratorType
-    private let zipper: PassZipperType
+    private let zipper: ZipperType
 	private let logger: Logger
     private let fileManager: FileManager
 	
     init(configuration: PassGeneratorConfiguration, localizablesGenerator: LocalizablesGeneratorType,
          itemsCopier: ItemsCopierType, manifestGenerator: ManifestGeneratorType, pemGenerator: PEMGeneratorType,
-         signatureGenerator: SignatureGeneratorType, zipper: PassZipperType, logger: Logger, fileManager: FileManager) {
+         signatureGenerator: SignatureGeneratorType, zipper: ZipperType, logger: Logger, fileManager: FileManager) {
 		self.configuration = configuration
         self.localizablesGenerator = localizablesGenerator
         self.itemsCopier = itemsCopier
@@ -75,7 +75,7 @@ public struct PassGenerator: PassGeneratorType {
                   manifestGenerator: ManifestGenerator(logger: logger, fileManager: fileManager),
                   pemGenerator: PEMGenerator(logger: logger),
                   signatureGenerator: SignatureGenerator(logger: logger),
-                  zipper: PassZipper(logger: logger),
+                  zipper: Zipper(logger: logger),
                   logger: logger,
                   fileManager: fileManager)
     }

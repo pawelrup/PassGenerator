@@ -14,7 +14,7 @@ final class PassGeneratorTests: XCTestCase {
     let manifestGenerator = ManifestGeneratorMock()
     let pemGenerator = PemGeneratorMock()
     let signatureGenerator = SignatureGeneratorMock()
-    let zipper = PassZipperMock()
+    let zipper = ZipperMock()
     lazy var sut: PassGeneratorType = PassGenerator(
         configuration: config,
         localizablesGenerator: localizablesGenerator,

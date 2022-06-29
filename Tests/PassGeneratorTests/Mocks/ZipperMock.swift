@@ -1,7 +1,7 @@
 import Foundation
 @testable import PassGenerator
 
-class PassZipperMock: PassZipperType {
+class ZipperMock: ZipperType {
     typealias ZipClosure = (URL) -> Void
     var callCount = 0
     var zip: ZipClosure?

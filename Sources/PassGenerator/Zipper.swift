@@ -1,11 +1,11 @@
 import Foundation
 import Logging
 
-protocol PassZipperType {
+protocol ZipperType {
     func zipItems(in directoryURL: URL, to zipURL: URL) async throws
 }
 
-struct PassZipper: PassZipperType {
+struct Zipper: ZipperType {
     private let logger: Logger
     
     init(logger: Logger) {
