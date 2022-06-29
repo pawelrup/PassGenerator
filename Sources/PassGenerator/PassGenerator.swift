@@ -1,5 +1,4 @@
 import Foundation
-import NIOCore
 import Logging
 import CryptoSwift
 
@@ -40,7 +39,6 @@ public struct PassGeneratorConfiguration {
 
 public protocol PassGeneratorType {
     init(configuration: PassGeneratorConfiguration, logger: Logger)
-    func generatePass(_ pass: Pass, on eventLoop: EventLoop) -> EventLoopFuture<Data>
     func generatePass(_ pass: Pass) async throws -> Data
 }
 
@@ -132,26 +130,6 @@ public struct PassGenerator: PassGeneratorType {
         let data = try Data(contentsOf: pkpassURL)
         return data
     }
-	
-	/// Generate a signed .pkpass file
-	/// - parameters:
-	///     - pass: A Pass object containing all pass information, ensure the `passTypeIdentifier` and `teamIdentifier` match those in supplied certificate.
-	///     - destination: The destination of the .pkpass to be saved, if nil the pass will be saved to the execution directory (generally the case if the result Data is used).
-	///     - eventLoop: Event loop to perform async task on.
-	/// - returns: A future containing the data of the generated pass.
-	public func generatePass(_ pass: Pass, on eventLoop: EventLoop) -> EventLoopFuture<Data> {
-        let promise = eventLoop.makePromise(of: Data.self)
-        Task {
-            do {
-                let data = try await generatePass(pass)
-                promise.succeed(data)
-            } catch {
-                logger.error("failed to generate pkpass")
-                promise.fail(error)
-            }
-        }
-        return promise.futureResult
-	}
 }
 
 private extension PassGenerator {
@@ -173,19 +151,5 @@ private extension PassGenerator {
         ])
         try passData.write(to: passURL)
         logger.debug("save pass succeed")
-    }
-    
-    func savePassJSON(_ pass: Pass, to passDirectory: URL, on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
-        Task {
-            do {
-                try await generatePassJSON(from: pass, to: passDirectory)
-                promise.succeed(())
-            } catch {
-                logger.error("failed to save pass.json")
-                promise.fail(error)
-            }
-        }
-        return promise.futureResult
     }
 }

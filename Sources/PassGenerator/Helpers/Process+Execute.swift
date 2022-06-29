@@ -1,5 +1,4 @@
 import Foundation
-import NIO
 import Logging
 
 /// Different types of process output.

@@ -1,7 +1,5 @@
 import XCTest
 import Logging
-import NIOCore
-import NIOEmbedded
 @testable import PassGenerator
 
 final class ManifestGeneratorTests: XCTestCase {
