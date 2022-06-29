@@ -33,6 +33,7 @@ final class PassGeneratorTests: XCTestCase {
     }
     
     func testGeneratePassSuccessfully() async throws {
+        logger.info(#function)
         let pass = Pass(description: [.en: "tests pass description"],
                         formatVersion: 1,
                         organizationName: "example",
