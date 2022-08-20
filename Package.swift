@@ -5,7 +5,7 @@ import PackageDescription
 
 let dependencies: [PackageDescription.Package.Dependency] = [
     .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.5.1")),
-    .package(url: "https://github.com/apple/swift-log.git", .upToNextMinor(from: "1.4.2"))
+    .package(url: "https://github.com/apple/swift-log.git", .upToNextMinor(from: "1.4.4"))
 ]
 let targets: [Target] = [
     .target(name: "PassGenerator", dependencies: [
